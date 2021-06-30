@@ -19,5 +19,5 @@ jobs:
       - run: echo "🍏 This job's status is ${{ job.status }}."
       
       - name: Start test
-        run: ./run_tests.sh
+        run: ./run_tests.sh -u  # unittest
       - run: echo "Succesfully! Cheers!"

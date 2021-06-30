@@ -32,6 +32,11 @@ function print_usage {
     exit 1  # raise error
 }
 
+function print_error_msg() {
+    echo "${red}Error: $1.${noColor}"
+    echo ""
+}
+
 
 doCoverage=false
 doUnitTests=false
