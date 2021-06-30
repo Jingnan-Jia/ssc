@@ -11,4 +11,5 @@ monai
 sklearn
 tqdm
 scikit-learn
+nvidia-smi
 
