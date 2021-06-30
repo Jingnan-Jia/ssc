@@ -14,7 +14,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from sklearn.metrics import cohen_kappa_score
-import my_bland as sm
+import ssc_scoring.my_bland as sm
 import numpy as np
 import matplotlib
 import jjnutils.util as futil

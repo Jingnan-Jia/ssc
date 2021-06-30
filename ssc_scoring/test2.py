@@ -2,7 +2,8 @@
 import numpy as np
 import pandas as pd
 
-from confusion_test import confusion
+from ssc_scoring.confusion_test import confusion
+
 
 pred_1 = "/data/jjia/ssc_scoring/observer_agreement/16_patients/LKT2_16patients.csv"
 

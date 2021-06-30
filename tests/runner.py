@@ -7,7 +7,8 @@ import unittest
 
 
 loader = unittest.TestLoader()
-tests = loader.discover('.')
+tests = loader.discover('.', pattern='test_*.py')
+print(f"Testing files:{tests}")
 testRunner = unittest.runner.TextTestRunner()
 testRunner.run(tests)
 
