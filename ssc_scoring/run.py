@@ -16,7 +16,7 @@ from collections import OrderedDict
 from typing import (List, Tuple, Optional, Union, Dict, Sequence)
 from multiprocessing import Process, Manager, Lock
 
-import jjnutils.util as futil
+import myutil.myutil as futil
 import numpy as np
 import nvidia_smi
 import pandas as pd

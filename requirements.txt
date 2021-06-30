@@ -2,5 +2,5 @@ SimpleITK
 numpy
 torch
 seg-metrics
-jjnsegutils
+jjnutils
 Parameterized

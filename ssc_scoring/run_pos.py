@@ -30,10 +30,10 @@ from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import WeightedRandomSampler
 
 from ssc_scoring import confusion
-import jjnutils.util as futil
+import myutil.myutil as futil
 from ssc_scoring.set_args_pos import args
 import torchvision.models as models
-import myresnet3d
+from ssc_scoring import myresnet3d
 from statistics import mean
 
 
