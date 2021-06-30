@@ -10,32 +10,29 @@ import random
 import shutil
 import threading
 import time
-from typing import (Dict, List, Tuple, Hashable,
-                    Optional, Sequence, Union, Mapping)
-from typing import IO, TYPE_CHECKING, Any, Callable, Dict, List, Optional, Sequence, Union
+from statistics import mean
+from typing import Callable, Dict, List, Optional, Sequence, Union, Tuple, Hashable, Mapping
 
-from tqdm import tqdm
 import monai
+import myutil.myutil as futil
 import numpy as np
 import nvidia_smi
 import pandas as pd
 import torch
 import torch.nn as nn
+import torchvision.models as models
 # import streamlit as st
 from filelock import FileLock
 from monai.transforms import ScaleIntensityRange, RandGaussianNoise
-
 from sklearn.model_selection import KFold
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import WeightedRandomSampler
 
 from ssc_scoring import confusion
-import myutil.myutil as futil
-from ssc_scoring.set_args_pos import args
-import torchvision.models as models
 from ssc_scoring import myresnet3d
-from statistics import mean
+from ssc_scoring.set_args_pos import args
 
+TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
 class SmallNet_pos(nn.Module):
     def __init__(self, num_classes: int = 5, base: int = 8):
@@ -524,7 +521,7 @@ class LoadDatad:
     def __init__(self):
         self.normalize0to1 = ScaleIntensityRange(a_min=-1500.0, a_max=1500.0, b_min=0.0, b_max=1.0, clip=True)
 
-    def __call__(self, data: Dict) -> Dict[Hashable, np.ndarray]:
+    def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
         fpath = data['fpath_key']
         world_pos = np.array(data['world_key'])
         data_x = futil.load_itk(fpath, require_ori_sp=True)
@@ -628,8 +625,8 @@ def shiftd(d, start, z_size, y_size, x_size):
                      start[2]:start[2] + x_size]
     d['label_in_patch_key'] = d['label_in_img_key'] - start[0]  # image is shifted up, and relative position down
 
-    d['label_in_patch_key'][d['label_in_patch_key'] < 0] = args.lower_value  # any position outside the edge would be set as edge
-    d['label_in_patch_key'][d['label_in_patch_key'] > z_size] = args.upper_value  # any position outside the edge would be set as edge
+    d['label_in_patch_key'][d['label_in_patch_key'] < 0] = 0  # position outside the edge would be set as edge
+    d['label_in_patch_key'][d['label_in_patch_key'] > z_size] = z_size  # position outside the edge would be set as edge
 
     return d
 
@@ -640,8 +637,11 @@ class CenterCropPosd:
         self.y_size = y_size
         self.z_size = z_size
 
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
+
+    def __call__(self, data: TransInOut) -> TransInOut:
         d = dict(data)
+        keys = set(d.keys())
+        assert {'image_key','label_in_img_key','label_in_patch_key'}.issubset(keys)
         img_shape = d['image_key'].shape
         # print(f'img_shape: {img_shape}')
         assert img_shape[0] >= self.z_size

@@ -4,3 +4,11 @@ torch
 seg-metrics
 jjnsegutils
 Parameterized
+nibabel
+pandas
+torchvision
+monai
+sklearn
+tqdm
+scikit-learn
+

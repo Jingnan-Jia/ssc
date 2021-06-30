@@ -10,5 +10,9 @@ loader = unittest.TestLoader()
 tests = loader.discover('.', pattern='test_*.py')
 print(f"Testing files:{tests}")
 testRunner = unittest.runner.TextTestRunner()
-testRunner.run(tests)
+test_results = testRunner.run(tests)
 
+if test_results.wasSuccessful():
+    exit(0)
+else:
+    exit(1)
