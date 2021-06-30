@@ -91,9 +91,5 @@ class TestCenterCropPosd(unittest.TestCase):
         np.testing.assert_raises(AssertionError, np.testing.assert_array_equal,
                                  result["label_in_patch_key"], expected_out["label_in_patch_key"])
 
-        # self.assertIsNotNone(np.testing.assert_array_equal(result["label_in_patch_key"], expected_out["label_in_patch_key"]))
-
-
-
 if __name__ == "__main__":
     unittest.main()
