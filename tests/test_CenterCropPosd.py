@@ -8,6 +8,7 @@ from parameterized import parameterized
 import datetime
 from ssc_scoring.run_pos import CenterCropPosd
 import numpy as np
+from tests.utils import Compare
 
 TEST_CASE_3D_5Label_Upper = [
     {"z_size": 400, "y_size": 256, "x_size": 256},
@@ -112,12 +113,7 @@ class TestCenterCropPosd(unittest.TestCase):
                            TEST_CASE_3D_1Label_Lower])
     def test_CenterCropPosd(self, input_param, input_data, expected_out):
         result = CenterCropPosd(**input_param)(input_data)
-        # self.assertEqual(result, expected_out)
-        for k1, k2 in zip(result, expected_out):
-            if type(expected_out[k2]) is np.ndarray:
-                self.assertIsNone(np.testing.assert_array_equal(result[k1], expected_out[k2]))
-            else:
-                self.assertEqual(result[k1], expected_out[k2])
+        Compare().go(result, expected_out)
 
     @parameterized.expand([TEST_CASE_3D_1Label_Error])
     def test_CenterCropPosdError(self, input_param, input_data, expected_out):

@@ -240,7 +240,7 @@ class Cnn6fc2(nn.Module):
 
 
 class Vgg11_3d(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8):
+    def __init__(self, num_classes: int = 5, base: int = 8, in_level: int = 1):
         super().__init__()
         if args.InsNorm:
             self.features = nn.Sequential(
@@ -525,7 +525,7 @@ class LoadDatad:
 
     def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
         fpath = data['fpath_key']
-        world_pos = np.array(data['world_key'])
+        world_pos = np.array(data['world_key']).astype(np.float32)
         data_x = futil.load_itk(fpath, require_ori_sp=True)
         x = data_x[0]  # shape order: z, y, x
         print("cliping ... ")
@@ -533,8 +533,8 @@ class LoadDatad:
         x[x > 1500] = 1500
         # x = self.normalize0to1(x)
         # scale data to 0~1, it's convinent for future transform (add noise) during dataloader
-        ori = np.array(data_x[1])  # shape order: z, y, x
-        sp = np.array(data_x[2])  # shape order: z, y, x
+        ori = np.array(data_x[1]).astype(np.float32)  # shape order: z, y, x
+        sp = np.array(data_x[2]).astype(np.float32)  # shape order: z, y, x
         y = ((world_pos - ori[0]) / sp[0]).astype(int)
 
         data_x_np = x.astype(np.float32)

@@ -4,10 +4,14 @@
 # @Email   : jiajingnan2222@gmail.com
 
 import unittest
+import tempfile
+import os
+
 from parameterized import parameterized
 from ssc_scoring.run_pos import LoadDatad
 import numpy as np
 import myutil.myutil as futil
+from tests.utils import Compare
 
 TEST_CASE_Error = [
     {"image_key": np.ones((1000, 256, 256)),
@@ -26,12 +30,12 @@ TEST_CASE_1 = [
     {'world_key': np.array([1400]),
      'fpath_key': "./tests/data/abcd.mhd"},
 
-    {"image_key": np.ones((30, 40, 50)),
-     "label_in_img_key": np.array([800]),
-     "label_in_patch_key": np.array([800]),  # not sure
-     'world_key': np.array([1400]),
+    {"image_key": np.ones((30, 40, 50)).astype(np.float32),
+     "label_in_img_key": np.array([4800.]),
+     "label_in_patch_key": np.array([4800.]),  # not sure
+     'world_key': np.array([1400.]),
      'space_key': np.array([0.5, 0.3, 0.3]),  # space,  a np.array with shape(-1, )
-     'origin_key': np.array([-1000,2,3]),  # origin,  a np.array with shape(-1, )
+     'origin_key': np.array([-1000.,2.,3.]),  # origin,  a np.array with shape(-1, )
      'fpath_key': "./tests/data/abcd.mhd"}  # full path, a string
 ]
 
@@ -44,14 +48,18 @@ class TestLoadDatad(unittest.TestCase):
 
     @parameterized.expand([TEST_CASE_1])
     def test_LoadDatad(self, input_data, expected_out):
-        ts_data = np.ones((30, 40, 50))
-        futil.save_itk(filename=input_data["fpath_key"], scan=ts_data, origin=(-1000,2,3), spacing=(0.5, 0.3, 0.3))
-        result = LoadDatad()(input_data)
-        for k1, k2 in zip(result, expected_out):
-            if type(expected_out[k2]) is np.ndarray:
-                self.assertEqual(result[k1].shape, expected_out[k2].shape)
-            else:
-                self.assertEqual(result[k1], expected_out[k2])
+        ts_data = np.ones((30, 40, 50)) # z, y, z
+        with tempfile.TemporaryDirectory() as tempdir:
+            input_data['fpath_key'] = os.path.join(tempdir, os.path.basename(input_data["fpath_key"]))
+            futil.save_itk(filename=input_data["fpath_key"],
+                           scan=ts_data,
+                           origin=(-1000, 2, 3),
+                           spacing=(0.5, 0.3, 0.3))
+            result = LoadDatad()(input_data)
+            Compare().go(result, expected_out)
+
+
+                # parent dir from tempfile is not fixed
 
 
 if __name__ == "__main__":

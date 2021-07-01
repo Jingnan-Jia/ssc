@@ -7,6 +7,7 @@ import unittest
 from parameterized import parameterized
 from ssc_scoring.run_pos import CropLevelRegiond
 import numpy as np
+from tests.utils import Compare
 
 TEST_CASE_3D_5Label_1 = [
     {"level": 1, "height": 200, "rand_start": False, "start": 400},
@@ -68,20 +69,16 @@ class TestCropLevelRegiond(unittest.TestCase):
     @parameterized.expand([TEST_CASE_3D_5Label_1, TEST_CASE_3D_5Label_2])
     def test_CropLevelRegiond(self, input_param, input_data, expected_out):
         result = CropLevelRegiond(**input_param)(input_data)
-        for k1, k2 in zip(result, expected_out):
-            if type(expected_out[k2]) is np.ndarray:
-                self.assertIsNone(np.testing.assert_array_equal(result[k1], expected_out[k2]))
-            else:
-                self.assertEqual(result[k1], expected_out[k2])
+        Compare().go(result, expected_out)
 
     @parameterized.expand([TEST_CASE_3D_5Label_3])
     def test_CropLevelRegiond_shape(self, input_param, input_data, expected_out):
         result = CropLevelRegiond(**input_param)(input_data)
-        for k1, k2 in zip(result, expected_out):
-            if type(expected_out[k2]) is np.ndarray:
-                self.assertEqual(result[k1].shape, expected_out[k2].shape)
+        for k in result.keys():
+            if type(expected_out[k]) is np.ndarray:
+                self.assertEqual(result[k].shape, expected_out[k].shape)
             else:
-                self.assertEqual(result[k1], expected_out[k2])
+                self.assertEqual(result[k], expected_out[k])
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ import unittest
 import warnings
 from io import BytesIO
 from subprocess import PIPE, Popen
-from typing import Optional
+from typing import Optional, Mapping
 from urllib.error import ContentTooShortError, HTTPError, URLError
 
 import numpy as np
@@ -30,6 +30,18 @@ from monai.utils import ensure_tuple, optional_import, set_determinism
 nib, _ = optional_import("nibabel")
 
 quick_test_var = "QUICKTEST"
+
+
+class Compare(unittest.TestCase):
+    def go(self, result: Mapping, expected_out: Mapping):
+        for k in result.keys():
+            if type(expected_out[k]) is np.ndarray:
+                self.assertIsNone(np.testing.assert_allclose(result[k], expected_out[k], rtol=1e-5, atol=0))
+            else:
+                if k == 'fpath_key':
+                    self.assertEqual(os.path.basename(result[k]), os.path.basename(expected_out[k]))
+                else:
+                    self.assertEqual(result[k], expected_out[k])
 
 
 def test_pretrained_networks(network, input_param, device):
