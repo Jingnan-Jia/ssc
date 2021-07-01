@@ -34,6 +34,7 @@ from ssc_scoring.set_args_pos import args
 
 TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
+
 class SmallNet_pos(nn.Module):
     def __init__(self, num_classes: int = 5, base: int = 8):
         super().__init__()
@@ -392,7 +393,7 @@ def load_data_5labels(dir_pat: str, df_excel: pd.DataFrame) -> Tuple[str, np.nda
 class DatasetPos(Dataset):
     """SSc scoring dataset."""
 
-    def __init__(self, data: Sequence, xform: Union[Sequence[Callable], Callable] =None):
+    def __init__(self, data: Sequence, xform: Union[Sequence[Callable], Callable] = None):
         self.data = data
         self.transform = xform
 
@@ -412,6 +413,8 @@ class DatasetPos(Dataset):
         data['label_in_patch_key'] = torch.as_tensor(data['label_in_patch_key'])
 
         return data
+
+
 #
 #
 #
@@ -527,8 +530,8 @@ class LoadDatad:
         data_x = futil.load_itk(fpath, require_ori_sp=True)
         x = data_x[0]  # shape order: z, y, x
         print("cliping ... ")
-        x[x<-1500] = -1500
-        x[x>1500] = 1500
+        x[x < -1500] = -1500
+        x[x > 1500] = 1500
         # x = self.normalize0to1(x)
         # scale data to 0~1, it's convinent for future transform (add noise) during dataloader
         ori = np.array(data_x[1])  # shape order: z, y, x
@@ -637,11 +640,10 @@ class CenterCropPosd:
         self.y_size = y_size
         self.z_size = z_size
 
-
     def __call__(self, data: TransInOut) -> TransInOut:
         d = dict(data)
         keys = set(d.keys())
-        assert {'image_key','label_in_img_key','label_in_patch_key'}.issubset(keys)
+        assert {'image_key', 'label_in_img_key', 'label_in_patch_key'}.issubset(keys)
         img_shape = d['image_key'].shape
         # print(f'img_shape: {img_shape}')
         assert img_shape[0] >= self.z_size
@@ -676,15 +678,30 @@ class RandomCropPosd:
 
 
 class CropLevelRegiond:
-    def __init__(self, level: int, rand_start: bool = True, start: Optional[int] = None):
+    """
+    Only keep the label of the current level: label_in_img.shape=(1,), label_in_patch.shape=(1,)
+    """
+
+    def __init__(self, level: int, height: int, rand_start: bool, start: Optional[int] = None):
+        """
+
+        :param level: int
+        :param rand_start: during training (rand_start=True), inference (rand_start=False).
+        :param start: If rand_start is True, start would be ignored.
+        """
         self.level = level
-        self.height = args.z_size  # 95% CI
+        self.height = height
         self.rand_start = rand_start
         self.start = start
 
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         d = dict(data)
-        d['label_in_img_key'] = d['label_in_img_key'][self.level-1]
+
+        if self.height > d['image_key'].shape[0]:
+            raise Exception(
+                f"desired height {self.height} is greater than image size along z {d['image_key'].shape[0]}")
+
+        d['label_in_img_key'] = d['label_in_img_key'][self.level - 1]  # keep the current label for the current level
         label: int = d['label_in_img_key']  # z slice number
         lower: int = max(0, label - self.height)
         if self.rand_start:
@@ -703,9 +720,8 @@ class CropLevelRegiond:
         d['image_key'] = d['image_key'][start: end].astype(np.float32)
 
         d['label_in_patch_key'] = d['label_in_img_key'] - start
-        d['label_in_patch_key'] = np.array(d['label_in_patch_key']).reshape(-1, ).astype(np.float32)
 
-        d['world_key'] = d['world_key'][self.level-1]
+        d['world_key'] = d['world_key'][self.level - 1]
         d['world_key'] = np.array(d['world_key']).reshape(-1, ).astype(np.float32)
 
         return d
@@ -736,7 +752,7 @@ class ComposePosd:
 def get_xformd(mode=None, level=None):
     xforms = [LoadDatad()]
     if level:
-        xforms.append(CropLevelRegiond(level, rand_start=True))
+        xforms.append(CropLevelRegiond(level, height=args.z_size, rand_start=True))
     else:
         if mode == 'train':
             # xforms.extend([RandomCropPosd(), RandGaussianNoisePosd()])
@@ -876,7 +892,6 @@ def start_run(mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_
         batch_y = data['label_in_patch_key'].to(device)
         sp_z = data['space_key'][:, 0].reshape(-1, 1).to(device)
 
-
         t2 = time.time()
         t_to_device.append(t2 - t1)
 
@@ -920,8 +935,8 @@ def start_run(mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_
         t3 = time.time()
         t_train_per_step.append(t3 - t2)
 
-        print('loss:', loss.item(), 'pred:', (pred[0]/sp_z).clone().detach().cpu().numpy(),
-              'label:', (batch_y/sp_z).clone().detach().cpu().numpy())
+        print('loss:', loss.item(), 'pred:', (pred[0] / sp_z).clone().detach().cpu().numpy(),
+              'label:', (batch_y / sp_z).clone().detach().cpu().numpy())
 
         total_loss += loss.item()
         total_loss_mae += loss_mae.item()
@@ -938,8 +953,8 @@ def start_run(mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_
                          "t_to_device": t_to_device,
                          "t_train_per_step": t_train_per_step})
     print({"t_load_data": t_load_data,
-                     "t_to_device": t_to_device,
-                     "t_train_per_step": t_train_per_step})
+           "t_to_device": t_to_device,
+           "t_train_per_step": t_train_per_step})
 
     ave_loss = total_loss / batch_idx
     ave_loss_mae = total_loss_mae / batch_idx
@@ -1135,17 +1150,17 @@ def all_loader(mypath, data_dir, label_file, kfold_seed=49):
     # vdaug_dataset = DatasetPos(vd_data[:5], xform=get_xformd('train', level=args.fine_level))
     # vd_dataset =DatasetPos(vd_data[:5], xform=get_xformd('valid', level=args.fine_level))
     if args.if_test:
-        ts_dataset =monai.data.PersistentDataset(data=ts_data, transform=get_xformd('test', level=args.fine_level),
-                                         cache_dir="persistent_cache")
+        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=get_xformd('test', level=args.fine_level),
+                                                  cache_dir="persistent_cache")
     else:
         ts_dataset = None
     tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=get_xformd('train', level=args.fine_level),
                                               replace_rate=0.2, cache_num=40, num_init_workers=4,
-                                              num_replace_workers=8) #or self.n_train > self.tr_nb_cache
+                                              num_replace_workers=8)  # or self.n_train > self.tr_nb_cache
     vd_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('valid', level=args.fine_level),
                                          num_workers=4, cache_rate=1)
     vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('train', level=args.fine_level),
-                                         num_workers=4, cache_rate=1)
+                                            num_workers=4, cache_rate=1)
 
     # tr_dataset = DatasetPos(x_fpaths=tr_x, world_list=tr_y, xform=get_xformd('train', level=args.fine_level))
     # have compatible learning curve
@@ -1154,11 +1169,11 @@ def all_loader(mypath, data_dir, label_file, kfold_seed=49):
     # ts_dataset = DatasetPos(x_fpaths=ts_x, world_list=ts_y, xform=get_xformd('test', level=args.fine_level))
 
     train_dataloader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers,
-                                 pin_memory=True, persistent_workers=True)
+                                  pin_memory=True, persistent_workers=True)
     validaug_dataloader = DataLoader(vdaug_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers,
-                                 pin_memory=True, persistent_workers=True)
+                                     pin_memory=True, persistent_workers=True)
     valid_dataloader = DataLoader(vd_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers,
-                                 pin_memory=True, persistent_workers=True)
+                                  pin_memory=True, persistent_workers=True)
     if args.if_test:
         test_dataloader = DataLoader(ts_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers,
                                      pin_memory=True, persistent_workers=True)
@@ -1217,9 +1232,10 @@ def train(id: int):
     for i in range(epochs):  # 20000 epochs
         if args.mode in ['train', 'continue_train']:
             start_run('train', net, train_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
-        if i % args.valid_period==0:
+        if i % args.valid_period == 0:
             # run the validation
-            valid_mae_best = start_run('valid', net, valid_dataloader, loss_fun, loss_fun_mae, opt, mypath, i, valid_mae_best)
+            valid_mae_best = start_run('valid', net, valid_dataloader, loss_fun, loss_fun_mae, opt, mypath, i,
+                                       valid_mae_best)
             start_run('validaug', net, validaug_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
             if args.if_test:
                 start_run('test', net, test_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
@@ -1232,10 +1248,11 @@ def train(id: int):
         compute_metrics(mypath)
     print('Finish all things!')
 
+
 def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1):
     print(f'start load {fpath} for sliding window inference')
     trans = ComposePosd([LoadDatad(), MyNormalizeImagePosd()])
-    data = trans(data={'fpath_key': fpath, 'world_key':world_pos})
+    data = trans(data={'fpath_key': fpath, 'world_key': world_pos})
 
     raw_x = data['image_key']
     label = data['label_in_img_key']
@@ -1258,7 +1275,7 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1):
     while start < label:
         if i < batch_size:
             print(f'start: {start}, i: {i}')
-            crop = CropLevelRegiond(level=args.fine_level, rand_start= False, start = start)
+            crop = CropLevelRegiond(level=args.fine_level, height=args.z_size, rand_start=False, start=start)
             new_data = crop(data)
             new_patch, new_label = new_data['image_key'], new_data['label_in_patch_key']
             # patch: np.ndarray = raw_x[start:start + z_size]  # z, y, z
@@ -1338,7 +1355,7 @@ class Evaluater():
                 batch_world: np.ndarray = batch_data['world_key'][idx].cpu().detach().numpy()
                 head = ['L1', 'L2', 'L3', 'L4', 'L5']
                 if args.fine_level:
-                    head = [head[args.fine_level-1]]
+                    head = [head[args.fine_level - 1]]
                 if idx < 5:
                     futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '.csv',
                                         pred_in_img_all, head=head)
@@ -1354,23 +1371,22 @@ class Evaluater():
                                         pred_all_world, head=head)
 
                 if args.fine_level:
-                    batch_label = np.array(batch_label).reshape(-1,)
-                    batch_preds_ave = np.array(batch_preds_ave).reshape(-1,)
-                    batch_preds_int= np.array(batch_preds_int).reshape(-1,)
-                    batch_preds_world = np.array(batch_preds_world).reshape(-1,)
-                    batch_world = np.array(batch_world).reshape(-1,)
+                    batch_label = np.array(batch_label).reshape(-1, )
+                    batch_preds_ave = np.array(batch_preds_ave).reshape(-1, )
+                    batch_preds_int = np.array(batch_preds_int).reshape(-1, )
+                    batch_preds_world = np.array(batch_preds_world).reshape(-1, )
+                    batch_world = np.array(batch_world).reshape(-1, )
                 futil.appendrows_to(self.mypath.label(self.mode), batch_label, head=head)  # label in image
                 futil.appendrows_to(self.mypath.pred(self.mode), batch_preds_ave, head=head)  # pred in image
                 futil.appendrows_to(self.mypath.pred_int(self.mode), batch_preds_int, head=head)
                 futil.appendrows_to(self.mypath.pred_world(self.mode), batch_preds_world, head=head)  # pred in world
-                futil.appendrows_to(self.mypath.world(self.mode), batch_world, head=head)  #33 label in world
+                futil.appendrows_to(self.mypath.world(self.mode), batch_world, head=head)  # 33 label in world
 
 
 def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoader], mypath: Path):
     net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))  # load the best weights to do evaluation
     net.eval()
     for mode, dataloader in dataloader_dict.items():
-
         evaluater = Evaluater(net, dataloader, mode, mypath)
         evaluater.run()
         # except:
