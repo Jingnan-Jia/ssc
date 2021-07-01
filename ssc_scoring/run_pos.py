@@ -21,7 +21,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torchvision.models as models
-# import streamlit as st
 from filelock import FileLock
 from monai.transforms import ScaleIntensityRange, RandGaussianNoise
 from sklearn.model_selection import KFold
@@ -35,7 +34,7 @@ from ssc_scoring.set_args_pos import args
 TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
 
-class SmallNet_pos(nn.Module):
+class Cnn3fc1(nn.Module):
     def __init__(self, num_classes: int = 5, base: int = 8):
         super().__init__()
         self.features = nn.Sequential(
@@ -339,7 +338,7 @@ class Vgg11_3d(nn.Module):
 
 def get_net_pos(name: str, nb_cls: int):
     if name == 'cnn3fc1':
-        net = SmallNet_pos(num_classes=nb_cls)
+        net = Cnn3fc1(num_classes=nb_cls)
     elif name == 'cnn3fc2':
         net = Cnn3fc2(num_classes=nb_cls)
     elif name == 'cnn4fc2':
@@ -694,7 +693,7 @@ class CropLevelRegiond:
         self.rand_start = rand_start
         self.start = start
 
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
+    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
         d = dict(data)
 
         if self.height > d['image_key'].shape[0]:
