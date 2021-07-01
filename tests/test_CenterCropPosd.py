@@ -37,7 +37,7 @@ TEST_CASE_3D_5Label_Normal = [  # label_in_patch 500 -> 200, others keep unchang
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None},  # full path, a string
 
-    {"image_key": np.ones((4800, 256, 256)),
+    {"image_key": np.ones((800, 256, 256)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": np.array([400, 500, 600, 700, 800])}  # full path, a string
 ]

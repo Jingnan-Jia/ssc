@@ -701,7 +701,7 @@ class CropLevelRegiond:
             raise Exception(
                 f"desired height {self.height} is greater than image size along z {d['image_key'].shape[0]}")
 
-        d['label_in_img_key'] = d['label_in_img_key'][self.level - 1]  # keep the current label for the current level
+        d['label_in_img_key'] = np.array(d['label_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
         label: int = d['label_in_img_key']  # z slice number
         lower: int = max(0, label - self.height)
         if self.rand_start:
@@ -721,8 +721,8 @@ class CropLevelRegiond:
 
         d['label_in_patch_key'] = d['label_in_img_key'] - start
 
-        d['world_key'] = d['world_key'][self.level - 1]
-        d['world_key'] = np.array(d['world_key']).reshape(-1, ).astype(np.float32)
+        d['world_key'] = np.array(d['world_key'][self.level - 1]).reshape(-1, )
+        # d['world_key'] = np.array(d['world_key']).reshape(-1, ).astype(np.float32)
 
         return d
 
