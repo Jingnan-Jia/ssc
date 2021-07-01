@@ -89,7 +89,7 @@ cmd="${PY_EXE}"
 if [ $doCoverage = true ]
 then
     echo "${separator}${blue}coverage${noColor}"
-    cmd="${PY_EXE} -m coverage run --append"
+    cmd="coverage run"
 fi
 
 
