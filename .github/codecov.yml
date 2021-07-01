@@ -1,0 +1,30 @@
+coverage:
+  precision: 2
+  round: down
+  range: "50...100"  # The value range where you want the value to be green
+  status:
+    project:
+      default:
+        target: auto  # auto or 70%. Minimum coverage ratio that the commit must meet to be considered a success.
+        threshold: 10
+        if_no_uploads: error
+        if_not_found: success
+        if_ci_failed: error
+        only_pulls: false
+        flags: null
+        paths: null
+    patch:
+      default:
+        target: auto
+        # Allows PRs without tests, overall stats count
+        threshold: 100
+        base: auto
+        if_no_uploads: error
+        if_not_found: success
+        if_ci_failed: error
+        only_pulls: false
+        flags: null
+        paths: null
+
+# Disable comments on PR
+comment: false
