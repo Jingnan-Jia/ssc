@@ -12,4 +12,4 @@ jobs:
           pip install -r requirements.txt
           python ./tests/runner.py
           bash <(curl -s https://codecov.io/bash) -f /tests/cov_report.xml
-      - run: echo "Succesfully! Cheers!"
+          echo "Succesfully! Cheers!"
