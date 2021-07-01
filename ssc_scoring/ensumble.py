@@ -6,7 +6,7 @@ import glob
 import os
 import pandas as pd
 import numpy as np
-from run import round_to_5
+from ssc_scoring.run import round_to_5
 import csv
 
 

@@ -14,7 +14,7 @@ from sklearn.metrics import cohen_kappa_score
 import statsmodels.api as sm
 import numpy as np
 import matplotlib
-import jjnutils.util as futil
+import myutil.myutil as futil
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')

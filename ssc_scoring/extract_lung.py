@@ -2,7 +2,7 @@
 # @Time    : 4/10/21 11:59 AM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
-from jjnutils.util import get_all_ct_names, load_itk, save_itk
+from myutil.myutil import get_all_ct_names, load_itk, save_itk
 from scipy.ndimage import morphology
 import numpy as np
 import time

@@ -13,3 +13,9 @@ tqdm
 scikit-learn
 nvidia_ml_py3
 filelock
+opencv-python
+scikit-image
+matplotlib
+
+
+

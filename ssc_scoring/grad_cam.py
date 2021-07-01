@@ -12,9 +12,9 @@ import torch
 import torchvision.transforms as transforms
 from torchvision import models
 import json
-from run import get_net, Path, prepare_data, SysDataset, ssc_transformd
+from ssc_scoring.run import get_net, Path, prepare_data, SysDataset, ssc_transformd
 from torch.utils.data import Dataset, DataLoader
-import jjnutils.util as load_itk
+import myutil.myutil as load_itk
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

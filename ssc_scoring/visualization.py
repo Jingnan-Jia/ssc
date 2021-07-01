@@ -4,7 +4,7 @@
 # @Email   : jiajingnan2222@gmail.com
 import torch
 import numpy as np
-import jjnutils.util as futil
+import myutil.myutil as futil
 import cv2
 import torchvision.models as models
 import torch.nn as nn
