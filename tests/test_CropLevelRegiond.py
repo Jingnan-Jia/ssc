@@ -31,15 +31,19 @@ TEST_CASE_3D_5Label_1 = [
 ]
 
 TEST_CASE_3D_5Label_2 = [  # rand start
-    {"level": 1, "height": 200, "rand_start": True, "start": 400},
+    {"level": 2, "height": 200, "rand_start": True, "start": 400},
 
     {"image_key": np.ones((1000, 256, 256)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
-     "label_in_patch_key": None},  # full path, a string
+     "label_in_patch_key": None,
+     'world_key': np.array([1000, 1200, 1400, 1600, 1800]),
+     },  # full path, a string
 
     {"image_key": np.ones((400, 256, 256)),
-     "label_in_img_key": np.array([500]),
-     "label_in_patch_key": np.array([100])}  # full path, a string
+     "label_in_img_key": np.array([600]),
+     "label_in_patch_key": np.array([100]),  # not sure
+     'world_key': np.array([1200]),
+     }  # full path, a string
 ]
 
 
