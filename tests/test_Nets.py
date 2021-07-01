@@ -13,20 +13,20 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 TEST_CASE_1 = [
     {"num_classes": 5, "base": 8},
-    (4, 1, 192, 256, 256),
-    (4, 5),
+    (2, 1, 160, 192, 192),
+    (2, 5),
 ]
 
 TEST_CASE_2 = [
     {"num_classes": 1, "base": 8},
-    (4, 1, 192, 256, 256),
-    (4, 1),
+    (2, 1, 160, 192, 192),
+    (2, 1),
 ]
 
 TEST_CASE_3 = [
     {"num_classes": 9, "base": 8},
-    (4, 1, 192, 256, 256),
-    (4, 9),
+    (2, 1, 160, 192, 192),
+    (2, 9),
 ]
 
 CASES = [TEST_CASE_1, TEST_CASE_2, TEST_CASE_3]
@@ -41,7 +41,7 @@ class TestNets(unittest.TestCase):
                 self.assertEqual(result.shape, expected_shape)
 
     def test_script(self):
-        test_data = torch.randn(2, 1, 512, 256, 256)
+        test_data = torch.randn(1, 1, 256, 192, 192)
         for Net in [Cnn3fc1, Cnn3fc2, Cnn4fc2, Cnn5fc2, Cnn6fc2, Vgg11_3d]:
             net = Net(num_classes=8).to(device)
             test_script_save(net, test_data)
