@@ -16,6 +16,6 @@ filelock
 opencv-python
 scikit-image
 matplotlib
-
+coverage
 
 
