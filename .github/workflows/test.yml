@@ -10,5 +10,5 @@ jobs:
       - name: Start test
         run: |
           pip install -r requirements.txt
-          python ./tests/runner.py -c
+          python ./tests/runner.py
       - run: echo "Succesfully! Cheers!"
