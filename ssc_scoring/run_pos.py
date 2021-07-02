@@ -35,7 +35,7 @@ TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
 
 class Cnn3fc1(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8):
+    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv3d(1, base, kernel_size=3, padding=1),
@@ -66,7 +66,7 @@ class Cnn3fc1(nn.Module):
 
 
 class Cnn3fc2(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8):
+    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv3d(1, base, kernel_size=3, padding=1),
@@ -100,7 +100,7 @@ class Cnn3fc2(nn.Module):
 
 
 class Cnn4fc2(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8):
+    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv3d(1, base, 3, padding=1),
@@ -137,7 +137,7 @@ class Cnn4fc2(nn.Module):
 
 
 class Cnn5fc2(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8):
+    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv3d(1, base, 3, padding=1),
@@ -186,7 +186,7 @@ class Cnn5fc2(nn.Module):
 
 
 class Cnn6fc2(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8):
+    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
         super().__init__()
         self.features = nn.Sequential(
             nn.Conv3d(1, base, 3, padding=1),
@@ -240,115 +240,111 @@ class Cnn6fc2(nn.Module):
 
 
 class Vgg11_3d(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8, in_level: int = 1):
+    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
         super().__init__()
-        if args.InsNorm:
-            self.features = nn.Sequential(
-                nn.Conv3d(1, base, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.InstanceNorm3d(base),
-                nn.MaxPool3d(kernel_size=3, stride=2),
+        self.num_classes = num_classes
+        self.base = base
+        self.level_node = level_node
 
-                nn.Conv3d(base, base * 2, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.InstanceNorm3d(base * 2),
-                nn.MaxPool3d(kernel_size=3, stride=2),
+        self.features = nn.Sequential(
+            nn.Conv3d(1, base, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm3d(base),
+            nn.MaxPool3d(kernel_size=3, stride=2),
 
-                nn.Conv3d(base * 2, base * 4, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.InstanceNorm3d(base * 4),
-                nn.Conv3d(base * 4, base * 4, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.InstanceNorm3d(base * 4),
-                nn.MaxPool3d(kernel_size=3, stride=2),
+            nn.Conv3d(base, base * 2, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm3d(base * 2),
+            nn.MaxPool3d(kernel_size=3, stride=2),
 
-                nn.Conv3d(base * 4, base * 8, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.InstanceNorm3d(base * 8),
-                nn.Conv3d(base * 8, base * 8, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.InstanceNorm3d(base * 8),
-                nn.MaxPool3d(kernel_size=3, stride=2),
+            nn.Conv3d(base * 2, base * 4, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm3d(base * 4),
+            nn.Conv3d(base * 4, base * 4, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm3d(base * 4),
+            nn.MaxPool3d(kernel_size=3, stride=2),
 
-                nn.Conv3d(base * 8, base * 16, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.InstanceNorm3d(base * 16),
-                nn.Conv3d(base * 16, base * 16, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.InstanceNorm3d(base * 16),
-                nn.MaxPool3d(kernel_size=3, stride=2),
+            nn.Conv3d(base * 4, base * 8, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm3d(base * 8),
+            nn.Conv3d(base * 8, base * 8, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm3d(base * 8),
+            nn.MaxPool3d(kernel_size=3, stride=2),
 
-            )
-        else:
-            self.features = nn.Sequential(
-                nn.Conv3d(1, base, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm3d(base),
-                nn.MaxPool3d(kernel_size=3, stride=2),
+            nn.Conv3d(base * 8, base * 16, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm3d(base * 16),
+            nn.Conv3d(base * 16, base * 16, 3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm3d(base * 16),
+            nn.MaxPool3d(kernel_size=3, stride=2),)
 
-                nn.Conv3d(base, base * 2, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm3d(base * 2),
-                nn.MaxPool3d(kernel_size=3, stride=2),
-
-                nn.Conv3d(base * 2, base * 4, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm3d(base * 4),
-                nn.Conv3d(base * 4, base * 4, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm3d(base * 4),
-                nn.MaxPool3d(kernel_size=3, stride=2),
-
-                nn.Conv3d(base * 4, base * 8, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm3d(base * 8),
-                nn.Conv3d(base * 8, base * 8, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm3d(base * 8),
-                nn.MaxPool3d(kernel_size=3, stride=2),
-
-                nn.Conv3d(base * 8, base * 16, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm3d(base * 16),
-                nn.Conv3d(base * 16, base * 16, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm3d(base * 16),
-                nn.MaxPool3d(kernel_size=3, stride=2),
-
-            )
         self.avgpool = nn.AdaptiveAvgPool3d((6, 6, 6))
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(base * 16 * 6 * 6 * 6, args.fc1_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc1_nodes, args.fc2_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc2_nodes, num_classes),
-        )
+        self.ft = nn.Flatten()
+        self.dp1 = nn.Dropout()
 
-    def forward(self, x):
+        if self.level_node != 0:
+            nb_fc0 = base * 16 * 6 * 6 * 6 + 1
+        else:
+            nb_fc0 = base * 16 * 6 * 6 * 6
+
+        self.ln1 = nn.Linear(nb_fc0, args.fc1_nodes)
+        self.rl1 = nn.ReLU(inplace=True)
+
+        self.dp2 = nn.Dropout()
+        self.ln2 = nn.Linear(args.fc1_nodes, args.fc2_nodes)
+        self.rl2 = nn.ReLU(inplace=True)
+
+        self.dp3 = nn.Dropout()
+        self.ln3 = nn.Linear(args.fc2_nodes, self.num_classes)
+
+
+    def _fc_first(self, x: torch.Tensor):
         x = self.features(x)
         x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
+        x = self.ft(x)
+        x = self.dp1(x)
+        return x
+
+    def forward(self, data):
+        if self.level_node != 0:
+            x, level = data
+            # level = level.reshape(-1,1)
+            # level = self.ln_level(level)
+            x = self._fc_first(x)
+            x = torch.cat((x, level), 1)
+        else:
+            x, level = data, None
+            x = self._fc_first(x)
+
+        x = self.ln1(x)
+        x = self.rl1(x)
+
+        x = self.ln2(x)
+        x = self.dp2(x)
+        x = self.rl2(x)
+
+        x = self.dp3(x)
+        x = self.ln3(x)
+
         return x
 
 
-def get_net_pos(name: str, nb_cls: int):
+def get_net_pos(name: str, nb_cls: int, level_node = 0):
     if name == 'cnn3fc1':
-        net = Cnn3fc1(num_classes=nb_cls)
+        net = Cnn3fc1(num_classes=nb_cls, level_node=level_node)
     elif name == 'cnn3fc2':
-        net = Cnn3fc2(num_classes=nb_cls)
+        net = Cnn3fc2(num_classes=nb_cls, level_node=level_node)
     elif name == 'cnn4fc2':
-        net = Cnn4fc2(num_classes=nb_cls)
+        net = Cnn4fc2(num_classes=nb_cls, level_node=level_node)
     elif name == 'cnn5fc2':
-        net = Cnn5fc2(num_classes=nb_cls)
+        net = Cnn5fc2(num_classes=nb_cls, level_node=level_node)
     elif name == 'cnn6fc2':
-        net = Cnn6fc2(num_classes=nb_cls)
+        net = Cnn6fc2(num_classes=nb_cls, level_node=level_node)
     elif name == "vgg11_3d":
-        net = Vgg11_3d(num_classes=nb_cls)
+        net = Vgg11_3d(num_classes=nb_cls, level_node=level_node)
     elif name == "r3d_resnet":
         if args.pretrained:  # inplane=64
             net = models.video.r3d_18(pretrained=True, progress=True)
@@ -520,9 +516,8 @@ class DatasetPos(Dataset):
 #
 #
 class LoadDatad:
-    def __init__(self):
-        self.normalize0to1 = ScaleIntensityRange(a_min=-1500.0, a_max=1500.0, b_min=0.0, b_max=1.0, clip=True)
-
+    # def __init__(self):
+        # self.normalize0to1 = ScaleIntensityRange(a_min=-1500.0, a_max=1500.0, b_min=0.0, b_max=1.0, clip=True)
     def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
         fpath = data['fpath_key']
         world_pos = np.array(data['world_key']).astype(np.float32)
@@ -547,6 +542,7 @@ class LoadDatad:
                 'space_key': sp,  # space,  a np.array with shape(-1, )
                 'origin_key': ori,  # origin,  a np.array with shape(-1, )
                 'fpath_key': fpath}  # full path, a string
+
         return data
 
 
@@ -679,16 +675,18 @@ class RandomCropPosd:
 class CropLevelRegiond:
     """
     Only keep the label of the current level: label_in_img.shape=(1,), label_in_patch.shape=(1,)
+    and add a level_key to data dick.
     """
 
-    def __init__(self, level: int, height: int, rand_start: bool, start: Optional[int] = None):
+    def __init__(self, level_node: int, train_on_level: int, height: int, rand_start: bool, start: Optional[int] = None):
         """
 
         :param level: int
         :param rand_start: during training (rand_start=True), inference (rand_start=False).
         :param start: If rand_start is True, start would be ignored.
         """
-        self.level = level
+        self.level_node = level_node
+        self.train_on_level = train_on_level
         self.height = height
         self.rand_start = rand_start
         self.start = start
@@ -699,6 +697,14 @@ class CropLevelRegiond:
         if self.height > d['image_key'].shape[0]:
             raise Exception(
                 f"desired height {self.height} is greater than image size along z {d['image_key'].shape[0]}")
+
+        if self.train_on_level != 0:
+            self.level = self.train_on_level  # only input data from this level
+        else:
+            if self.level_node!=0:
+                self.level = random.randint(1, 5)  # 1,2,3,4,5 level is randomly selected
+            else:
+                raise Exception("Do not need CropLevelRegiond because level_node==0 and train_on_level==0")
 
         d['label_in_img_key'] = np.array(d['label_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
         label: int = d['label_in_img_key']  # z slice number
@@ -721,7 +727,7 @@ class CropLevelRegiond:
         d['label_in_patch_key'] = d['label_in_img_key'] - start
 
         d['world_key'] = np.array(d['world_key'][self.level - 1]).reshape(-1, )
-        # d['world_key'] = np.array(d['world_key']).reshape(-1, ).astype(np.float32)
+        d['level_key'] = np.array(self.level).reshape(-1, )
 
         return d
 
@@ -748,10 +754,10 @@ class ComposePosd:
         return format_string
 
 
-def get_xformd(mode=None, level=None):
+def get_xformd(mode=None, level_node=0, train_on_level=0, height=None):
     xforms = [LoadDatad()]
-    if level:
-        xforms.append(CropLevelRegiond(level, height=args.z_size, rand_start=True))
+    if level_node or train_on_level:
+        xforms.append(CropLevelRegiond(level_node, train_on_level, height=height, rand_start=True))
     else:
         if mode == 'train':
             # xforms.extend([RandomCropPosd(), RandGaussianNoisePosd()])
@@ -889,6 +895,11 @@ def start_run(mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_
 
         batch_x = data['image_key'].to(device)
         batch_y = data['label_in_patch_key'].to(device)
+        print('level: ', data['level_key'])
+        if args.level_node != 0:
+            batch_level = data['level_key'].to(device)
+            print('batch_level', batch_level.clone().cpu().numpy())
+            batch_x = [batch_x, batch_level]
         sp_z = data['space_key'][:, 0].reshape(-1, 1).to(device)
 
         t2 = time.time()
@@ -934,7 +945,7 @@ def start_run(mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_
         t3 = time.time()
         t_train_per_step.append(t3 - t2)
 
-        print('loss:', loss.item(), 'pred:', (pred[0] / sp_z).clone().detach().cpu().numpy(),
+        print('loss:', loss.item(), 'pred:', (pred / sp_z).clone().detach().cpu().numpy(),
               'label:', (batch_y / sp_z).clone().detach().cpu().numpy())
 
         total_loss += loss.item()
@@ -1137,35 +1148,32 @@ def all_loader(mypath, data_dir, label_file, kfold_seed=49):
 
     tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = prepare_data(mypath, data_dir, label_file, kfold_seed=kfold_seed,
                                                       fold=args.fold, total_folds=args.total_folds)
-    # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:6], tr_y[:6], vd_x[:6], vd_y[:6], ts_x[:6], ts_y[:6]
+    tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
     log_dict['tr_pat_nb'] = len(tr_x)
     log_dict['vd_pat_nb'] = len(vd_x)
     log_dict['ts_pat_nb'] = len(ts_x)
+
     tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
     vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]
     ts_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(ts_x, ts_y)]
 
-    # tr_dataset = DatasetPos(tr_data, xform=get_xformd('train', level=args.fine_level))
-    # vdaug_dataset = DatasetPos(vd_data[:5], xform=get_xformd('train', level=args.fine_level))
-    # vd_dataset =DatasetPos(vd_data[:5], xform=get_xformd('valid', level=args.fine_level))
     if args.if_test:
-        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=get_xformd('test', level=args.fine_level),
+        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=get_xformd('test', level_node=args.level_node,
+                                                                                 train_on_level=args.train_on_level, height=args.z_size),
                                                   cache_dir="persistent_cache")
     else:
         ts_dataset = None
-    tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=get_xformd('train', level=args.fine_level),
-                                              replace_rate=0.2, cache_num=40, num_init_workers=4,
+    tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=get_xformd('train', level_node=args.level_node,
+                                                                                 train_on_level=args.train_on_level, height=args.z_size),
+                                              replace_rate=0.2, cache_num=6, num_init_workers=4,
                                               num_replace_workers=8)  # or self.n_train > self.tr_nb_cache
-    vd_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('valid', level=args.fine_level),
+    vd_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('valid', level_node=args.level_node,
+                                                                                 train_on_level=args.train_on_level, height=args.z_size),
                                          num_workers=4, cache_rate=1)
-    vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('train', level=args.fine_level),
+    vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('train', level_node=args.level_node,
+                                                                                 train_on_level=args.train_on_level, height=args.z_size),
                                             num_workers=4, cache_rate=1)
 
-    # tr_dataset = DatasetPos(x_fpaths=tr_x, world_list=tr_y, xform=get_xformd('train', level=args.fine_level))
-    # have compatible learning curve
-    # vdaug_dataset = DatasetPos(x_fpaths=vd_x, world_list=vd_y, xform=get_xformd('train', level=args.fine_level))
-    # vd_dataset = DatasetPos(x_fpaths=vd_x, world_list=vd_y, xform=get_xformd('valid', level=args.fine_level))
-    # ts_dataset = DatasetPos(x_fpaths=ts_x, world_list=ts_y, xform=get_xformd('test', level=args.fine_level))
 
     train_dataloader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers,
                                   pin_memory=True, persistent_workers=True)
@@ -1207,11 +1215,11 @@ def compute_metrics(mypath: Path):
 
 def train(id: int):
     mypath = Path(id)
-    if args.fine_level:
+    if args.train_on_level or args.level_node:
         outs = 1
     else:
         outs = 5
-    net: torch.nn.Module = get_net_pos(args.net, outs)
+    net: torch.nn.Module = get_net_pos(args.net, outs, args.level_node)
     data_dir = dataset_dir(args.resample_z)
     label_file = "dataset/SSc_DeepLearning/GohScores.xlsx"
     train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader(mypath, data_dir, label_file)
@@ -1243,8 +1251,7 @@ def train(id: int):
     if args.if_test:
         dataloader_dict.update({'test': test_dataloader})
     record_best_preds(net, dataloader_dict, mypath)
-    if not args.fine_level:
-        compute_metrics(mypath)
+    compute_metrics(mypath)
     print('Finish all things!')
 
 
@@ -1274,7 +1281,7 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1):
     while start < label:
         if i < batch_size:
             print(f'start: {start}, i: {i}')
-            crop = CropLevelRegiond(level=args.fine_level, height=args.z_size, rand_start=False, start=start)
+            crop = CropLevelRegiond(level_node=args.level_node, train_on_level=args.train_on_level, height=args.z_size, rand_start=False, start=start)
             new_data = crop(data)
             new_patch, new_label = new_data['image_key'], new_data['label_in_patch_key']
             # patch: np.ndarray = raw_x[start:start + z_size]  # z, y, z
@@ -1353,8 +1360,8 @@ class Evaluater():
                                                 batch_data['origin_key'][idx][0].item()
                 batch_world: np.ndarray = batch_data['world_key'][idx].cpu().detach().numpy()
                 head = ['L1', 'L2', 'L3', 'L4', 'L5']
-                if args.fine_level:
-                    head = [head[args.fine_level - 1]]
+                if args.train_on_level:
+                    head = [head[args.train_on_level - 1]]
                 if idx < 5:
                     futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '.csv',
                                         pred_in_img_all, head=head)
@@ -1369,7 +1376,7 @@ class Evaluater():
                     futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '_world.csv',
                                         pred_all_world, head=head)
 
-                if args.fine_level:
+                if args.train_on_level:
                     batch_label = np.array(batch_label).reshape(-1, )
                     batch_preds_ave = np.array(batch_preds_ave).reshape(-1, )
                     batch_preds_int = np.array(batch_preds_int).reshape(-1, )

@@ -31,6 +31,10 @@ TEST_CASE_3 = [
 
 CASES = [TEST_CASE_1, TEST_CASE_2, TEST_CASE_3]
 
+CASE_InLevel = {"input_param": {"num_classes": 9, "base": 8, "in_level": 3},
+                "input_data": [torch.randn((2, 1, 160, 192, 192)).to(device), torch.tensor([[3], [3]]).to(device)],
+                "expected_shape": (2, 9)}
+
 class TestNets(unittest.TestCase):
     @parameterized.expand(CASES)
     def test_shape(self, input_param, input_shape, expected_shape):
@@ -45,6 +49,19 @@ class TestNets(unittest.TestCase):
         for Net in [Cnn3fc1, Cnn3fc2, Cnn4fc2, Cnn5fc2, Cnn6fc2, Vgg11_3d]:
             net = Net(num_classes=8).to(device)
             test_script_save(net, test_data)
+
+class TestVgg11_3d_InLevel(unittest.TestCase):
+    def test_shape(self):
+        net = Vgg11_3d(num_classes=9, base=8, in_level=3).to(device)
+        with eval_mode(net):
+            data = [torch.randn((2, 1, 160, 192, 192)).to(device), torch.tensor([[3], [3]]).to(device)]
+            result = net.forward(data)
+            self.assertEqual(result.shape, (2,9))
+
+    def test_script(self):
+        test_data = torch.randn(1, 1, 256, 192, 192)
+        net = Vgg11_3d(num_classes=8, in_level=2).to(device)
+        test_script_save(net, test_data)
 
 
 if __name__ == "__main__":

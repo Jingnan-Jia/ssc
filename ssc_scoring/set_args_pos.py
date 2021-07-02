@@ -11,7 +11,6 @@ parser = argparse.ArgumentParser(description="SSc score prediction.")
 parser.add_argument('--mode', choices=('train', 'infer', 'continue_train'), help='mode', type=str, default='train')
 parser.add_argument('--eval_id', help='id used for inference, or continue_train', type=int, default=0)
 parser.add_argument('--pretrained', choices=(1, 0), help='pretrained or not', type=int, default=0)
-parser.add_argument('--InsNorm', choices=(1, 0), help='pretrained or not', type=int, default=0)
 
 parser.add_argument('--net', choices=('vgg11_3d', 'r3d_resnet', 'cnn3fc1', 'cnn4fc2', 'cnn5fc2','cnn6fc2', 'cnn2fc1', 'cnn3fc2'), help='network name', type=str,
                     default='vgg11_3d')
@@ -21,15 +20,13 @@ parser.add_argument('--fc_m1', help='the number of nodes of last layer', type=in
 
 parser.add_argument('--total_folds', choices=(4, 5), help='4-fold training', type=int, default=4)
 parser.add_argument('--fold', choices=(1, 2, 3, 4), help='1 to 4', type=int, default=3)
-parser.add_argument('--level', choices=(1, 2, 3, 4, 5, 0), help='level of data, 0 denotes all', type=int, default=0)
 parser.add_argument('--sampler', choices=(1, 0), help='if customer sampler?', type=int, default=0)
-parser.add_argument('--workers',  help='number of workers for dataloader', type=int, default=10)
-
+parser.add_argument('--workers',  help='number of workers for dataloader', type=int, default=1)
 parser.add_argument('--ts_level_nb', choices=(235, 240), help='if customer sampler?', type=int, default=240)
-parser.add_argument('--masked_by_lung', choices=(1, 0), help='if slices are masked by lung masks', type=int, default=0)
 
-parser.add_argument('--fine_level', choices=(0, 1, 2, 3, 4, 5), help='train network for the level', type=int, default=1)
-# parser.add_argument('--fine_window', help='patch size along z', type=int, default=48)
+parser.add_argument('--train_on_level', choices=(1, 2, 3, 4, 5, 0), help='level of used img data, 0 denotes all', type=int, default=3)
+parser.add_argument('--level_node', choices=(1, 0), help='if network has an extra level node', type=int, default=0)
+
 parser.add_argument('--if_test', choices=(1, 0), help='if customer sampler?', type=int, default=0)
 parser.add_argument('--valid_period', help='how many epochs between 2 validation', type=int, default=5)
 
@@ -42,14 +39,18 @@ parser.add_argument('--loss', choices=('mse', 'mae', 'smooth_mae', 'mse+mae', 'm
                     default='mse')
 parser.add_argument('--epochs', help='total epochs', type=int, default=500)
 parser.add_argument('--weight_decay', help='L2 regularization', type=float, default=0.0001)  # must be a float number !
-parser.add_argument('--batch_size', help='batch_size', type=int, default=1)
+parser.add_argument('--batch_size', help='batch_size', type=int, default=2)
 parser.add_argument('--infer_stride', help='infer_stride', type=int, default=16)
+parser.add_argument('--in_level', help='input level', default=1)
 
 parser.add_argument('--outfile', help='output file when running by script instead of pycharm', type=str)
 parser.add_argument('--hostname', help='hostname of the server', type=str)
 parser.add_argument('--remark', help='comments on this experiment', type=str)
 
 args = parser.parse_args()
+
+if args.level_node == 1:
+    args.train_on_level = 0  # use data from all levels to train this network
 
 if args.resample_z == 256:
     args.z_size = 192

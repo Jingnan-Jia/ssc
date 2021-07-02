@@ -14,7 +14,7 @@ import myutil.myutil as futil
 from tests.utils import Compare
 
 TEST_CASE_Error = [
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((100, 256, 256)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      'world_key': np.array([1000, 1200, 1400, 1600, 1800]),
@@ -37,6 +37,7 @@ TEST_CASE_1 = [
      'space_key': np.array([0.5, 0.3, 0.3]),  # space,  a np.array with shape(-1, )
      'origin_key': np.array([-1000.,2.,3.]),  # origin,  a np.array with shape(-1, )
      'fpath_key': "./tests/data/abcd.mhd"}  # full path, a string
+
 ]
 
 
