@@ -27,9 +27,10 @@ from sklearn.model_selection import KFold
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data import WeightedRandomSampler
 
-from ssc_scoring import confusion
-from ssc_scoring import myresnet3d
-from ssc_scoring.set_args_pos import args
+import confusion
+import myresnet3d
+from set_args_pos import args
+from networks import med3d_resnet as med3d
 
 TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
@@ -523,7 +524,7 @@ class LoadDatad:
         world_pos = np.array(data['world_key']).astype(np.float32)
         data_x = futil.load_itk(fpath, require_ori_sp=True)
         x = data_x[0]  # shape order: z, y, x
-        print("cliping ... ")
+        # print("cliping ... ")
         x[x < -1500] = -1500
         x[x > 1500] = 1500
         # x = self.normalize0to1(x)
@@ -873,7 +874,7 @@ def get_dir_pats(data_dir: str, label_file: str) -> List:
     return dir_pats
 
 
-def start_run(mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_idx,
+def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_idx,
               valid_mae_best=None):
     print(mode + "ing ......")
     loss_path = mypath.loss(mode)
@@ -895,6 +896,7 @@ def start_run(mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_
 
         batch_x = data['image_key'].to(device)
         batch_y = data['label_in_patch_key'].to(device)
+
         print('level: ', data['level_key'])
         if args.level_node != 0:
             batch_level = data['level_key'].to(device)
@@ -1148,7 +1150,7 @@ def all_loader(mypath, data_dir, label_file, kfold_seed=49):
 
     tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = prepare_data(mypath, data_dir, label_file, kfold_seed=kfold_seed,
                                                       fold=args.fold, total_folds=args.total_folds)
-    tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
+    # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
     log_dict['tr_pat_nb'] = len(tr_x)
     log_dict['vd_pat_nb'] = len(vd_x)
     log_dict['ts_pat_nb'] = len(ts_x)
@@ -1165,7 +1167,7 @@ def all_loader(mypath, data_dir, label_file, kfold_seed=49):
         ts_dataset = None
     tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=get_xformd('train', level_node=args.level_node,
                                                                                  train_on_level=args.train_on_level, height=args.z_size),
-                                              replace_rate=0.2, cache_num=6, num_init_workers=4,
+                                              replace_rate=0.2, cache_num=50, num_init_workers=4,
                                               num_replace_workers=8)  # or self.n_train > self.tr_nb_cache
     vd_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('valid', level_node=args.level_node,
                                                                                  train_on_level=args.train_on_level, height=args.z_size),
@@ -1212,6 +1214,17 @@ def compute_metrics(mypath: Path):
         except FileNotFoundError:
             continue
 
+def get_kd_net(net_name: str) -> nn.Module:
+    if net_name == "med3d_resnet50":
+        net = med3d.resnet50(sample_input_W=args.z_size,
+                sample_input_H=args.y_size,
+                sample_input_D=args.x_size,
+                shortcut_type='A',
+                no_cuda=False,
+                num_seg_classes=5)
+    elif net_name == "model_genesis":
+        net = None
+    return net
 
 def train(id: int):
     mypath = Path(id)
@@ -1236,16 +1249,20 @@ def train(id: int):
     log_dict['lr'] = lr
     opt = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=args.weight_decay)
     epochs = 0 if args.mode == 'infer' else args.epochs
+    if args.kd_net is not None:
+        kd_net = get_kd_net(args.kd_net)
+    else:
+        kd_net = None
     for i in range(epochs):  # 20000 epochs
         if args.mode in ['train', 'continue_train']:
-            start_run('train', net, train_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
+            start_run('train', net, kd_net, train_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
         if i % args.valid_period == 0:
             # run the validation
-            valid_mae_best = start_run('valid', net, valid_dataloader, loss_fun, loss_fun_mae, opt, mypath, i,
+            valid_mae_best = start_run('valid', net, kd_net, valid_dataloader, loss_fun, loss_fun_mae, opt, mypath, i,
                                        valid_mae_best)
-            start_run('validaug', net, validaug_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
+            start_run('validaug', net, kd_net, validaug_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
             if args.if_test:
-                start_run('test', net, test_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
+                start_run('test', net, kd_net, test_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
 
     dataloader_dict = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader}
     if args.if_test:
@@ -1257,7 +1274,13 @@ def train(id: int):
 
 def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1):
     print(f'start load {fpath} for sliding window inference')
-    trans = ComposePosd([LoadDatad(), MyNormalizeImagePosd()])
+    xforms = [LoadDatad(), MyNormalizeImagePosd()]
+
+        # xforms.append(CropLevelRegiond(args.level_node, args.train_on_level,
+        #                                height=args.z_size, rand_start=False, start=0))
+    trans = ComposePosd(xforms)
+
+
     data = trans(data={'fpath_key': fpath, 'world_key': world_pos})
 
     raw_x = data['image_key']
