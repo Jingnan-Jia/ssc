@@ -6,7 +6,7 @@
 import unittest
 from parameterized import parameterized
 import datetime
-from ssc_scoring.run_pos import CenterCropPosd
+from ssc_scoring.mytrans import CenterCropPosd
 import numpy as np
 from tests.utils import Compare
 

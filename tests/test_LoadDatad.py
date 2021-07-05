@@ -8,7 +8,7 @@ import tempfile
 import os
 
 from parameterized import parameterized
-from ssc_scoring.run_pos import LoadDatad
+from ssc_scoring.mytrans import LoadDatad
 import numpy as np
 import myutil.myutil as futil
 from tests.utils import Compare

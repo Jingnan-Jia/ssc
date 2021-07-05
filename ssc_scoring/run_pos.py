@@ -33,29 +33,9 @@ from set_args_pos import args
 from networks import med3d_resnet as med3d
 from networks import get_net_pos
 
-
-TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
-
-
-def load_data_of_pats(dir_pats: Union[List, np.ndarray], label_file: str) -> list:
-    df_excel = pd.read_excel(label_file, engine='openpyxl')
-    df_excel = df_excel.set_index('PatID')
-    x, y = [], []
-    for dir_pat in dir_pats:
-        x_pat, y_pat = load_data_5labels(dir_pat, df_excel)
-        x.append(x_pat)
-        y.append(y_pat)
-    return x, y
-
-
-def load_data_5labels(dir_pat: str, df_excel: pd.DataFrame) -> Tuple[str, np.ndarray]:
-    data_name = dir_pat
-    idx = int(dir_pat.split('Pat_')[-1][:3])
-    data_label = []
-    for level in [1, 2, 3, 4, 5]:
-        y = df_excel.at[idx, 'L' + str(level) + '_pos']
-        data_label.append(y)
-    return data_name, np.array(data_label)
+from mytrans import LoadDatad, MyNormalizeImagePosd, AddChannelPosd, RandomCropPosd, \
+    RandGaussianNoise, CenterCropPosd, CropLevelRegiond, ComposePosd
+from mydata import AllLoader
 
 
 class DatasetPos(Dataset):
@@ -83,164 +63,8 @@ class DatasetPos(Dataset):
         return data
 
 
-#
-#
-#
-# class DatasetPos(Dataset):
-#     """SSc scoring dataset."""
-#
-#     def __init__(self, x_fpaths: Sequence, world_list: Sequence, index: Sequence = None, xform=None):
-#
-#         self.data_x_names, self.world_list = np.array(x_fpaths), np.array(world_list)
-#
-#         if index is not None:
-#             self.data_x_names = self.data_x_names[index]
-#             self.world_list = self.world_list[index]
-#         print('loading data ...')
-#         self.data_x = [futil.load_itk(x, require_ori_sp=True) for x in tqdm(self.data_x_names)]
-#         self.data_x_np = [i[0] for i in self.data_x]  # shape order: z, y, x
-#         normalize0to1 = ScaleIntensityRange(a_min=-1500.0, a_max=1500.0, b_min=0.0, b_max=1.0, clip=True)
-#         print("normalizing ... ")
-#         self.data_x_np = [normalize0to1(x_np) for x_np in tqdm(self.data_x_np)]
-#         # scale data to 0~1, it's convinent for future transform during dataloader
-#         self.data_x_or_sp = [[i[1], i[2]] for i in self.data_x]
-#         self.ori = np.array([i[1] for i in self.data_x])  # shape order: z, y, x
-#         self.sp = np.array([i[2] for i in self.data_x])  # shape order: z, y, x
-#         self.y = []
-#         for world, ori, sp in zip(self.world_list, self.ori, self.sp):
-#             labels = [int((level_pos - ori[0]) / sp[0]) for level_pos in world]  # ori[0] is the ori of z axil
-#             self.y.append(np.array(labels))
-#
-#         if args.fine_level:
-#             x_ls = []
-#             y_ls = []
-#             for x, y in zip(self.data_x_np, self.y):
-#                 start = y[0] - args.fine_window
-#                 end = y[0] + args.fine_window
-#                 x = x[start: end]
-#                 x_ls.append(x)
-#
-#                 y = y[0] - start
-#                 y_ls.append(y)
-#
-#             self.data_x_np = x_ls
-#             self.y = y_ls
-#
-#         self.data_x_np = [x.astype(np.float32) for x in self.data_x_np]
-#         self.data_y_np = [y.astype(np.float32) for y in self.y]
-#
-#         # randomcrop = RandomCropPos()
-#         # image_, label_ = [], []
-#         # for image, label in zip(self.data_x_np, self.data_y_np):
-#         #     i, l = randomcrop(image, label)
-#         #     image_.append(i)
-#         #
-#         #     label_.append(l)
-#         #
-#         # noise = RandGaussianNoisePos()
-#         # for image, label in zip(self.data_x_np, self.data_y_np):
-#         #     image, label = noise(image, label)
-#         #
-#
-#         self.transform = xform
-#
-#     def __len__(self):
-#         return len(self.data_y_np)
-#
-#     def __getitem__(self, idx):
-#         if torch.is_tensor(idx):
-#             idx = idx.tolist()
-#
-#         data = {'image_key': self.data_x_np[idx],
-#                 'label_key': self.data_y_np[idx],
-#                 'world_key': self.world_list[idx],
-#                 'space_key': self.sp[idx],
-#                 'origin_key': self.ori[idx],
-#                 'fpath_key': self.data_x_names[idx]}
-#
-#         check_aug_effect = 0s
-#         if check_aug_effect:
-#             def crop_center(img, cropx, cropy):
-#                 y, x = img.shape
-#                 startx = x // 2 - (cropx // 2)
-#                 starty = y // 2 - (cropy // 2)
-#                 return img[starty:starty + cropy, startx:startx + cropx]
-#
-#             img_before_aug = crop_center(data['image_key'], 512, 512)
-#             futil.save_itk('aug_before_' + data['fpath_key'].split('/')[-1],
-#                            img_before_aug, data['origin_key'], data['space_key'], dtype='float')
-#         # if self.transform:
-#         #     self.data_xy=[self.transform(image, label) for image, label in zip(self.data_x_np, self.data_y_np)]
-#         #     self.data_x = [x for x in self.data_xy[0]]
-#         #     self.data_y = [y for y in self.data_xy[1]]
-#         #     self.data_x_np = np.array(self.data_x)
-#         #     self.data_y_np = np.array(self.data_y)
-#         if self.transform:
-#             data = self.transform(data)
-#
-#         if check_aug_effect:
-#             futil.save_itk('aug_after_' + data['fpath_key'].split('/')[-1],
-#                            data['image_key'], data['origin_key'], data['space_key'], dtype='float')
-#
-#         data['image_key'] = torch.as_tensor(data['image_key'])
-#         data['label_key'] = torch.as_tensor(data['label_key'])
-#
-#         return data
-#
-#
-class LoadDatad:
-    # def __init__(self):
-        # self.normalize0to1 = ScaleIntensityRange(a_min=-1500.0, a_max=1500.0, b_min=0.0, b_max=1.0, clip=True)
-    def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
-        fpath = data['fpath_key']
-        world_pos = np.array(data['world_key']).astype(np.float32)
-        data_x = futil.load_itk(fpath, require_ori_sp=True)
-        x = data_x[0]  # shape order: z, y, x
-        # print("cliping ... ")
-        x[x < -1500] = -1500
-        x[x > 1500] = 1500
-        # x = self.normalize0to1(x)
-        # scale data to 0~1, it's convinent for future transform (add noise) during dataloader
-        ori = np.array(data_x[1]).astype(np.float32)  # shape order: z, y, x
-        sp = np.array(data_x[2]).astype(np.float32)  # shape order: z, y, x
-        y = ((world_pos - ori[0]) / sp[0]).astype(int)
-
-        data_x_np = x.astype(np.float32)
-        data_y_np = y.astype(np.float32)
-
-        data = {'image_key': data_x_np,  # original image
-                'label_in_patch_key': data_y_np,  # relative label (slice number) in  a patch, np.array with shape(-1, )
-                'label_in_img_key': data_y_np,  # label in  the whole image, keep fixed, a np.array with shape(-1, )
-                'world_key': world_pos,  # world position in mm, keep fixed,  a np.array with shape(-1, )
-                'space_key': sp,  # space,  a np.array with shape(-1, )
-                'origin_key': ori,  # origin,  a np.array with shape(-1, )
-                'fpath_key': fpath}  # full path, a string
-
-        return data
-
-
-class AddChannelPosd:
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
-        """
-        Apply the transform to `img`.
-        """
-        d = dict(data)
-        d['image_key'] = d['image_key'][None]
-        return d
-
-
-class MyNormalizeImagePosd:
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
-        d = dict(data)
-
-        mean, std = np.mean(d['image_key']), np.std(d['image_key'])
-        d['image_key'] = d['image_key'] - mean
-        d['image_key'] = d['image_key'] / std
-        return d
-
-
 class Path:
-    def __init__(self, id, model_dir=None, check_id_dir=False) -> None:
+    def __init__(self, id, check_id_dir=False) -> None:
         self.id = id  # type: int
         self.slurmlog_dir = 'slurmlogs'
         self.model_dir = 'models_pos'
@@ -280,169 +104,20 @@ class Path:
     def data(self, mode: str):
         return os.path.join(self.id_dir, mode + '_data.csv')
 
-
-class RandGaussianNoisePosd:
-    def __init__(self, *args, **kargs):
-        self.noise = RandGaussianNoise(*args, **kargs)
-
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
-        d = dict(data)
-        d['image_key'] = self.noise(d['image_key'])
-        return d
-
-
-def shiftd(d, start, z_size, y_size, x_size):
-    d['image_key'] = d['image_key'][start[0]:start[0] + z_size, start[1]:start[1] + y_size,
-                     start[2]:start[2] + x_size]
-    d['label_in_patch_key'] = d['label_in_img_key'] - start[0]  # image is shifted up, and relative position down
-
-    d['label_in_patch_key'][d['label_in_patch_key'] < 0] = 0  # position outside the edge would be set as edge
-    d['label_in_patch_key'][d['label_in_patch_key'] > z_size] = z_size  # position outside the edge would be set as edge
-
-    return d
-
-
-class CenterCropPosd:
-    def __init__(self, z_size=args.z_size, y_size=args.y_size, x_size=args.x_size):
-        self.x_size = x_size
-        self.y_size = y_size
-        self.z_size = z_size
-
-    def __call__(self, data: TransInOut) -> TransInOut:
-        d = dict(data)
-        keys = set(d.keys())
-        assert {'image_key', 'label_in_img_key', 'label_in_patch_key'}.issubset(keys)
-        img_shape = d['image_key'].shape
-        # print(f'img_shape: {img_shape}')
-        assert img_shape[0] >= self.z_size
-        assert img_shape[1] >= self.y_size
-        assert img_shape[2] >= self.x_size
-        middle_point = [shape // 2 for shape in img_shape]
-        start = [middle_point[0] - self.z_size // 2, middle_point[1] - self.y_size // 2,
-                 middle_point[2] - self.y_size // 2]
-        d = shiftd(d, start, self.z_size, self.y_size, self.x_size)
-
-        return d
-
-
-class RandomCropPosd:
-    def __init__(self, z_size=args.z_size, y_size=args.y_size, x_size=args.x_size):
-        self.x_size = x_size
-        self.y_size = y_size
-        self.z_size = z_size
-
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
-        d = dict(data)
-        # if 'image_key' in data:
-        img_shape = d['image_key'].shape  # shape order: z,y x
-        assert img_shape[0] >= self.z_size
-        assert img_shape[1] >= self.y_size
-        assert img_shape[2] >= self.x_size
-
-        valid_range = (img_shape[0] - self.z_size, img_shape[1] - self.y_size, img_shape[2] - self.x_size)
-        start = [random.randint(0, v_range) for v_range in valid_range]
-        d = shiftd(d, start, self.z_size, self.y_size, self.x_size)
-        return d
-
-
-class CropLevelRegiond:
-    """
-    Only keep the label of the current level: label_in_img.shape=(1,), label_in_patch.shape=(1,)
-    and add a level_key to data dick.
-    """
-
-    def __init__(self, level_node: int, train_on_level: int, height: int, rand_start: bool, start: Optional[int] = None):
-        """
-
-        :param level: int
-        :param rand_start: during training (rand_start=True), inference (rand_start=False).
-        :param start: If rand_start is True, start would be ignored.
-        """
-        self.level_node = level_node
-        self.train_on_level = train_on_level
-        self.height = height
-        self.rand_start = rand_start
-        self.start = start
-
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
-        d = dict(data)
-
-        if self.height > d['image_key'].shape[0]:
-            raise Exception(
-                f"desired height {self.height} is greater than image size along z {d['image_key'].shape[0]}")
-
-        if self.train_on_level != 0:
-            self.level = self.train_on_level  # only input data from this level
+    def dataset_dir(self, resample_z: int) -> str:
+        if resample_z == 0:  # use original images
+            res_dir: str = 'SSc_DeepLearning'
+        elif resample_z == 256:
+            res_dir = 'LowResolution_fix_size'
+        elif resample_z == 512:
+            res_dir = 'LowRes512_192_192'
+        elif resample_z == 800:
+            res_dir = 'LowRes800_160_160'
+        elif resample_z == 1024:
+            res_dir = 'LowRes1024_256_256'
         else:
-            if self.level_node!=0:
-                self.level = random.randint(1, 5)  # 1,2,3,4,5 level is randomly selected
-            else:
-                raise Exception("Do not need CropLevelRegiond because level_node==0 and train_on_level==0")
-
-        d['label_in_img_key'] = np.array(d['label_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
-        label: int = d['label_in_img_key']  # z slice number
-        lower: int = max(0, label - self.height)
-        if self.rand_start:
-            start = random.randint(lower, label)  # between lower and label
-        else:
-            start = int(self.start)
-            if start < lower:
-                raise Exception(f"start position {start} is lower than the lower line {lower}")
-            if start > label:
-                raise Exception(f"start position {start} is higher than the label line {label}")
-
-        end = int(start + self.height)
-        if end > d['image_key'].shape[0]:
-            end = d['image_key'].shape[0]
-            start = end - self.height
-        d['image_key'] = d['image_key'][start: end].astype(np.float32)
-
-        d['label_in_patch_key'] = d['label_in_img_key'] - start
-
-        d['world_key'] = np.array(d['world_key'][self.level - 1]).reshape(-1, )
-        d['level_key'] = np.array(self.level).reshape(-1, )
-
-        return d
-
-
-class ComposePosd:
-    """My Commpose to handle with img and label at the same time.
-
-    """
-
-    def __init__(self, transforms):
-        self.transforms = transforms
-
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
-        for t in self.transforms:
-            data = t(data)
-        return data
-
-    def __repr__(self):
-        format_string = self.__class__.__name__ + '('
-        for t in self.transforms:
-            format_string += '\n'
-            format_string += '    {0}'.format(t)
-        format_string += '\n)'
-        return format_string
-
-
-def get_xformd(mode=None, level_node=0, train_on_level=0, height=None):
-    xforms = [LoadDatad()]
-    if level_node or train_on_level:
-        xforms.append(CropLevelRegiond(level_node, train_on_level, height=height, rand_start=True))
-    else:
-        if mode == 'train':
-            # xforms.extend([RandomCropPosd(), RandGaussianNoisePosd()])
-            xforms.extend([RandomCropPosd()])
-
-        else:
-            xforms.extend([CenterCropPosd()])
-
-    xforms.extend([MyNormalizeImagePosd(), AddChannelPosd()])
-    transform = ComposePosd(xforms)
-
-    return transform
+            raise Exception("wrong resample_z:" + str(args.resample_z))
+        return os.path.join(self.data_dir, res_dir)
 
 
 def _bytes_to_megabytes(value_bytes):
@@ -487,63 +162,6 @@ def record_GPU_info():
         gpu_util = gpu_util / 5
         log_dict['gpu_util'] = str(gpu_util) + '%'
     return None
-
-
-def split_dir_pats(data_dir, label_file, ts_id):
-    abs_dir_path = os.path.dirname(os.path.realpath(__file__))  # abosolute path of the current .py file
-    data_dir = abs_dir_path + "/" + data_dir
-
-    dir_pats = sorted(glob.glob(os.path.join(data_dir, "Pat_*CTimage.mha")))
-    if len(dir_pats) == 0:  # does not find patients in this directory
-        dir_pats = sorted(glob.glob(os.path.join(data_dir, "Pat_*CTimage_low.mha")))
-        if len(dir_pats) == 0:
-            dir_pats = sorted(glob.glob(os.path.join(data_dir, "Pat_*", "CTimage.mha")))
-
-    label_excel = pd.read_excel(label_file, engine='openpyxl')
-
-    # 3 labels for one level
-    pats_id_in_excel = pd.DataFrame(label_excel, columns=['PatID']).values
-    pats_id_in_excel = [i[0] for i in pats_id_in_excel]
-    print(f"len(dir): {len(dir_pats)}, len(pats_in_excel): {len(pats_id_in_excel)} ")
-    print("======================")
-    assert len(dir_pats) == len(pats_id_in_excel)
-
-    # assert the names of patients got from 2 ways
-    pats_id_in_dir = [int(path.split('Pat_')[-1][:3]) for path in dir_pats]
-    pats_id_in_excel = [int(pat_id) for pat_id in pats_id_in_excel]
-    assert pats_id_in_dir == pats_id_in_excel
-
-    ts_dir, tr_vd_dir = [], []
-    for id, dir_pt in zip(pats_id_in_dir, dir_pats):
-        if id in ts_id:
-            ts_dir.append(dir_pt)
-        else:
-            tr_vd_dir.append(dir_pt)
-    return np.array(tr_vd_dir), np.array(ts_dir)
-
-
-def get_dir_pats(data_dir: str, label_file: str) -> List:
-    """
-    get absolute directories of patients in this data_dir, use label_file to verify the existing directories.
-    data_dir: relative path
-    """
-    abs_dir_path = os.path.dirname(os.path.realpath(__file__))  # abosolute path of the current .py file
-    data_dir = abs_dir_path + "/" + data_dir
-    dir_pats = sorted(glob.glob(os.path.join(data_dir, "Pat_*")))
-
-    label_excel = pd.read_excel(label_file, engine='openpyxl')
-
-    # 3 labels for one level
-    pats_id_in_excel = pd.DataFrame(label_excel, columns=['PatID']).values
-    pats_id_in_excel = [i[0] for i in pats_id_in_excel]
-    assert len(dir_pats) == len(pats_id_in_excel)
-
-    # assert the names of patients got from 2 ways
-    pats_id_in_dir = [int(path.split('/')[-1].split('Pat_')[-1]) for path in dir_pats]
-    pats_id_in_excel = [int(pat_id) for pat_id in pats_id_in_excel]
-    assert pats_id_in_dir == pats_id_in_excel
-
-    return dir_pats
 
 
 def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_idx,
@@ -680,13 +298,6 @@ def get_column(n, tr_y):
     return column
 
 
-def save_xy(xs: list, ys: list, mode: str, mypath: Path):
-    with open(mypath.data(mode), 'a') as f:
-        writer = csv.writer(f)
-        for x, y in zip(xs, ys):
-            writer.writerow([x, y])
-
-
 class MSEHigher(nn.Module):
     """Dice and Xentropy loss"""
 
@@ -764,48 +375,6 @@ def get_loss(args):
     return loss_fun
 
 
-def prepare_data(mypath, data_dir, label_file, kfold_seed=49, fold=1, total_folds=4):
-    # get data_x names
-    kf = KFold(n_splits=total_folds, shuffle=True, random_state=kfold_seed)  # for future reproduction
-
-    if args.ts_level_nb == 240:
-        ts_id = [68, 83, 36, 187, 238, 12, 158, 189, 230, 11, 35, 37, 137, 144, 17, 42, 66, 70, 28, 64, 210, 3, 49, 32,
-                 236, 206, 194, 196, 7, 9, 16, 19, 20, 21, 40, 46, 47, 57, 58, 59, 60, 62, 116, 117, 118, 128, 134, 216]
-        tr_vd_pt, ts_pt = split_dir_pats(data_dir, label_file, ts_id)
-
-        kf_list = list(kf.split(tr_vd_pt))
-        tr_pt_idx, vd_pt_idx = kf_list[fold - 1]
-        tr_pt = tr_vd_pt[tr_pt_idx]
-        vd_pt = tr_vd_pt[vd_pt_idx]
-
-        tr_x, tr_y = load_data_of_pats(tr_pt, label_file)
-        vd_x, vd_y = load_data_of_pats(vd_pt, label_file)
-        ts_x, ts_y = load_data_of_pats(ts_pt, label_file)
-
-    else:
-        raise Exception('please use correct testing dataset')
-
-    for x, y, mode in zip([tr_x, vd_x, ts_x], [tr_y, vd_y, ts_y], ['train', 'valid', 'test']):
-        save_xy(x, y, mode, mypath)
-    return tr_x, tr_y, vd_x, vd_y, ts_x, ts_y
-
-
-def dataset_dir(resample_z: int) -> str:
-    if resample_z == 0:  # use original images
-        data_dir: str = "dataset/SSc_DeepLearning"
-    elif resample_z == 256:
-        data_dir: str = "dataset/LowResolution_fix_size"
-    elif resample_z == 512:
-        data_dir: str = "dataset/LowRes512_192_192"
-    elif resample_z == 800:
-        data_dir: str = "dataset/LowRes800_160_160"
-    elif resample_z == 1024:
-        data_dir: str = "dataset/LowRes1024_256_256"
-    else:
-        raise Exception("wrong resample_z:" + str(args.resample_z))
-    return data_dir
-
-
 def eval_net_mae(eval_id: int, net: torch.nn.Module, mypath: Path):
     mypath2 = Path(eval_id)
     shutil.copy(mypath2.model_fpath, mypath.model_fpath)  # make sure there is at least one model there
@@ -819,55 +388,6 @@ def eval_net_mae(eval_id: int, net: torch.nn.Module, mypath: Path):
     valid_mae_best = get_mae_best(mypath2.loss('valid'))
     print(f'load model from {mypath2.model_fpath}, valid_mae_best is {valid_mae_best}')
     return net, valid_mae_best
-
-
-def all_loader(mypath, data_dir, label_file, kfold_seed=49):
-    log_dict['data_dir'] = data_dir
-    log_dict['label_file'] = label_file
-    log_dict['data_shuffle_seed'] = kfold_seed
-
-    tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = prepare_data(mypath, data_dir, label_file, kfold_seed=kfold_seed,
-                                                      fold=args.fold, total_folds=args.total_folds)
-    # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
-    log_dict['tr_pat_nb'] = len(tr_x)
-    log_dict['vd_pat_nb'] = len(vd_x)
-    log_dict['ts_pat_nb'] = len(ts_x)
-
-    tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
-    vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]
-    ts_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(ts_x, ts_y)]
-
-    if args.if_test:
-        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=get_xformd('test', level_node=args.level_node,
-                                                                                 train_on_level=args.train_on_level, height=args.z_size),
-                                                  cache_dir="persistent_cache")
-    else:
-        ts_dataset = None
-    tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=get_xformd('train', level_node=args.level_node,
-                                                                                 train_on_level=args.train_on_level, height=args.z_size),
-                                              replace_rate=0.2, cache_num=50, num_init_workers=4,
-                                              num_replace_workers=8)  # or self.n_train > self.tr_nb_cache
-    vd_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('valid', level_node=args.level_node,
-                                                                                 train_on_level=args.train_on_level, height=args.z_size),
-                                         num_workers=4, cache_rate=1)
-    vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=get_xformd('train', level_node=args.level_node,
-                                                                                 train_on_level=args.train_on_level, height=args.z_size),
-                                            num_workers=4, cache_rate=1)
-
-
-    train_dataloader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.workers,
-                                  pin_memory=True, persistent_workers=True)
-    validaug_dataloader = DataLoader(vdaug_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers,
-                                     pin_memory=True, persistent_workers=True)
-    valid_dataloader = DataLoader(vd_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers,
-                                  pin_memory=True, persistent_workers=True)
-    if args.if_test:
-        test_dataloader = DataLoader(ts_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.workers,
-                                     pin_memory=True, persistent_workers=True)
-    else:
-        test_dataloader = None
-
-    return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
 
 
 def compute_metrics(mypath: Path):
@@ -915,10 +435,15 @@ def train(id: int):
     net_parameters = str(round(net_parameters / 1024 / 1024, 2))  # convert to **.** M
     log_dict['net_parameters'] = net_parameters
 
-    data_dir = dataset_dir(args.resample_z)
+    # data_dir = dataset_dir(args.resample_z)
     label_file = "dataset/SSc_DeepLearning/GohScores.xlsx"
-    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader(mypath, data_dir, label_file)
+    # log_dict['data_dir'] = data_dir
+    log_dict['label_file'] = label_file
+    log_dict['data_shuffle_seed'] = 49
 
+    all_loader = AllLoader(mypath, label_file, 49, args.fold, args.total_folds, args.ts_level_nb, args.level_node,
+                 args.train_on_level, args.z_size, args.y_size, args.x_size, args.batch_size, args.workers)
+    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
     net = net.to(device)
     if args.eval_id:
         net, valid_mae_best = eval_net_mae(args.eval_id, net, mypath)
