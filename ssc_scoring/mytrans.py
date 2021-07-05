@@ -62,7 +62,6 @@ class MyNormalizeImagePosd:
         return d
 
 
-
 class RandGaussianNoisePosd:
     def __init__(self, *args, **kargs):
         self.noise = RandGaussianNoise(*args, **kargs)

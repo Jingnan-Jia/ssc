@@ -6,7 +6,7 @@
 import unittest
 from parameterized import parameterized
 import datetime
-from ssc_scoring.run import time_diff
+from ssc_scoring.tool import time_diff
 
 TEST_CASE_1 = ['1:02:34']
 
