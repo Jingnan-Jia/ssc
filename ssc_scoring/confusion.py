@@ -72,25 +72,25 @@ def confusion(label_file, pred_file, label_nb=100, space=5):
             del df["ID"]
             del df["Level"]
 
-    if df_label.columns[0] not in ['L1_pos', 'L1', 'disext']:
-        df_label = pd.read_csv(label_file, header=None)
-        if len(df_label.columns) == 5:
-            columns = ['L1', 'L2', 'L3', 'L4', 'L5']
-        elif len(df_label.columns) == 3:
-            columns = ['disext', 'gg', 'retp']
-        else:
-            columns = ['unknown']
-        df_label.columns = columns
-
-    if df_pred.columns[0] not in ['L1_pos', 'L1', 'disext']:
-        df_pred = pd.read_csv(pred_file, header=None)
-        if len(df_pred.columns) == 5:
-            columns = ['L1', 'L2', 'L3', 'L4', 'L5']
-        elif len(df_pred.columns) == 3:
-            columns = ['disext', 'gg', 'retp']
-        else:
-            columns = ['unknown']
-        df_pred.columns = columns
+    # if df_label.columns[0] not in ['L1_pos', 'L1', 'disext']:
+    #     df_label = pd.read_csv(label_file, header=None)
+    #     if len(df_label.columns) == 5:
+    #         columns = ['L1', 'L2', 'L3', 'L4', 'L5']
+    #     elif len(df_label.columns) == 3:
+    #         columns = ['disext', 'gg', 'retp']
+    #     else:
+    #         columns = ['unknown']
+    #     df_label.columns = columns
+    #
+    # if df_pred.columns[0] not in ['L1_pos', 'L1', 'disext']:
+    #     df_pred = pd.read_csv(pred_file, header=None)
+    #     if len(df_pred.columns) == 5:
+    #         columns = ['L1', 'L2', 'L3', 'L4', 'L5']
+    #     elif len(df_pred.columns) == 3:
+    #         columns = ['disext', 'gg', 'retp']
+    #     else:
+    #         columns = ['unknown']
+    #     df_pred.columns = columns
 
     # df_label = df_label.head(18) # pred_1 = "/data/jjia/ssc_scoring/LK_time2_18patients.csv"
     # df_pred = df_pred.head(18) #label_1 = "/data/jjia/ssc_scoring/ground_truth_18_patients.csv"
@@ -105,7 +105,7 @@ def confusion(label_file, pred_file, label_nb=100, space=5):
     elif len(df_label.columns) == 1:
         row_nb, col_nb = 1, 1
     else:
-        raise Exception(f'the columns number is not 3 or 5, it is {len(df_label.columns)} ', df_label.columns)
+        raise Exception(f'the columns number is not 1, 3 or 5, it is {len(df_label.columns)} ', df_label.columns)
 
     basename = os.path.dirname(pred_file)
     prefix = pred_file.split("/")[-1].split("_")[0]

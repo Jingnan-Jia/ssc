@@ -31,338 +31,10 @@ import confusion
 import myresnet3d
 from set_args_pos import args
 from networks import med3d_resnet as med3d
+from networks import get_net_pos
+
 
 TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
-
-
-class Cnn3fc1(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
-        super().__init__()
-        self.features = nn.Sequential(
-            nn.Conv3d(1, base, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-            nn.Conv3d(base, base * 2, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-            nn.Conv3d(base * 2, base * 4, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-        )
-        self.avgpool = nn.AdaptiveAvgPool3d((6, 6, 6))
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(base * 4 * 6 * 6 * 6, args.fc_m1),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc_m1, num_classes),
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x
-
-
-class Cnn3fc2(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
-        super().__init__()
-        self.features = nn.Sequential(
-            nn.Conv3d(1, base, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-            nn.Conv3d(base, base * 2, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-            nn.Conv3d(base * 2, base * 4, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-        )
-        self.avgpool = nn.AdaptiveAvgPool3d((6, 6, 6))
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(base * 4 * 6 * 6 * 6, args.fc1_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc1_nodes, args.fc2_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc2_nodes, num_classes),
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x
-
-
-class Cnn4fc2(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
-        super().__init__()
-        self.features = nn.Sequential(
-            nn.Conv3d(1, base, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-            nn.Conv3d(base, base * 2, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-            nn.Conv3d(base * 2, base * 4, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-            nn.Conv3d(base * 4, base * 8, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-        )
-        self.avgpool = nn.AdaptiveAvgPool3d((6, 6, 6))
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(base * 8 * 6 * 6 * 6, args.fc1_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc1_nodes, args.fc2_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc2_nodes, num_classes),
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x
-
-
-class Cnn5fc2(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
-        super().__init__()
-        self.features = nn.Sequential(
-            nn.Conv3d(1, base, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base, base * 2, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 2),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 2, base * 4, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 4),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 4, base * 8, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 8),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 8, base * 16, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 16),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-        )
-        self.avgpool = nn.AdaptiveAvgPool3d((6, 6, 6))
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(base * 16 * 6 * 6 * 6, args.fc1_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc1_nodes, args.fc2_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc2_nodes, num_classes),
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x
-
-
-class Cnn6fc2(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
-        super().__init__()
-        self.features = nn.Sequential(
-            nn.Conv3d(1, base, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base, base * 2, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 2),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 2, base * 4, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 4),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 4, base * 8, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 8),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 8, base * 16, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 16),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 16, base * 32, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 32),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-        )
-        self.avgpool = nn.AdaptiveAvgPool3d((6, 6, 6))
-        self.classifier = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(base * 32 * 6 * 6 * 6, args.fc1_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc1_nodes, args.fc2_nodes),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(args.fc2_nodes, num_classes),
-        )
-
-    def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool(x)
-        x = torch.flatten(x, 1)
-        x = self.classifier(x)
-        return x
-
-
-class Vgg11_3d(nn.Module):
-    def __init__(self, num_classes: int = 5, base: int = 8, level_node = 0):
-        super().__init__()
-        self.num_classes = num_classes
-        self.base = base
-        self.level_node = level_node
-
-        self.features = nn.Sequential(
-            nn.Conv3d(1, base, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base, base * 2, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 2),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 2, base * 4, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 4),
-            nn.Conv3d(base * 4, base * 4, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 4),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 4, base * 8, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 8),
-            nn.Conv3d(base * 8, base * 8, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 8),
-            nn.MaxPool3d(kernel_size=3, stride=2),
-
-            nn.Conv3d(base * 8, base * 16, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 16),
-            nn.Conv3d(base * 16, base * 16, 3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm3d(base * 16),
-            nn.MaxPool3d(kernel_size=3, stride=2),)
-
-        self.avgpool = nn.AdaptiveAvgPool3d((6, 6, 6))
-        self.ft = nn.Flatten()
-        self.dp1 = nn.Dropout()
-
-        if self.level_node != 0:
-            nb_fc0 = base * 16 * 6 * 6 * 6 + 1
-        else:
-            nb_fc0 = base * 16 * 6 * 6 * 6
-
-        self.ln1 = nn.Linear(nb_fc0, args.fc1_nodes)
-        self.rl1 = nn.ReLU(inplace=True)
-
-        self.dp2 = nn.Dropout()
-        self.ln2 = nn.Linear(args.fc1_nodes, args.fc2_nodes)
-        self.rl2 = nn.ReLU(inplace=True)
-
-        self.dp3 = nn.Dropout()
-        self.ln3 = nn.Linear(args.fc2_nodes, self.num_classes)
-
-
-    def _fc_first(self, x: torch.Tensor):
-        x = self.features(x)
-        x = self.avgpool(x)
-        x = self.ft(x)
-        x = self.dp1(x)
-        return x
-
-    def forward(self, data):
-        if self.level_node != 0:
-            x, level = data
-            # level = level.reshape(-1,1)
-            # level = self.ln_level(level)
-            x = self._fc_first(x)
-            x = torch.cat((x, level), 1)
-        else:
-            x, level = data, None
-            x = self._fc_first(x)
-
-        x = self.ln1(x)
-        x = self.rl1(x)
-
-        x = self.ln2(x)
-        x = self.dp2(x)
-        x = self.rl2(x)
-
-        x = self.dp3(x)
-        x = self.ln3(x)
-
-        return x
-
-
-def get_net_pos(name: str, nb_cls: int, level_node = 0):
-    if name == 'cnn3fc1':
-        net = Cnn3fc1(num_classes=nb_cls, level_node=level_node)
-    elif name == 'cnn3fc2':
-        net = Cnn3fc2(num_classes=nb_cls, level_node=level_node)
-    elif name == 'cnn4fc2':
-        net = Cnn4fc2(num_classes=nb_cls, level_node=level_node)
-    elif name == 'cnn5fc2':
-        net = Cnn5fc2(num_classes=nb_cls, level_node=level_node)
-    elif name == 'cnn6fc2':
-        net = Cnn6fc2(num_classes=nb_cls, level_node=level_node)
-    elif name == "vgg11_3d":
-        net = Vgg11_3d(num_classes=nb_cls, level_node=level_node)
-    elif name == "r3d_resnet":
-        if args.pretrained:  # inplane=64
-            net = models.video.r3d_18(pretrained=True, progress=True)
-            net.stem[0] = nn.Conv3d(1, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2),
-                                    padding=(1, 3, 3), bias=False)
-            net.fc = torch.nn.Linear(in_features=512, out_features=nb_cls)
-        else:  # inplane = 8
-            net = myresnet3d.r3d_18(pretrained=False, num_classes=nb_cls)
-            net.stem[0] = nn.Conv3d(1, 8, kernel_size=(3, 7, 7), stride=(1, 2, 2),
-                                    padding=(1, 3, 3), bias=False)
-    else:
-        raise Exception('wrong net name', name)
-    net_parameters = futil.count_parameters(net)
-    net_parameters = str(net_parameters // 1024 // 1024)  # convert to M
-    log_dict['net_parameters'] = net_parameters
-
-    return net
 
 
 def load_data_of_pats(dir_pats: Union[List, np.ndarray], label_file: str) -> list:
@@ -889,24 +561,27 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
 
     t0 = time.time()
     t_load_data, t_to_device, t_train_per_step = [], [], []
+    gpu_flag = True
     for data in dataloader:
 
         t1 = time.time()
         t_load_data.append(t1 - t0)
 
         batch_x = data['image_key'].to(device)
+        # print('batch_x.shape', batch_x.size())
         batch_y = data['label_in_patch_key'].to(device)
 
-        print('level: ', data['level_key'])
+        # print('level: ', data['level_key'])
         if args.level_node != 0:
             batch_level = data['level_key'].to(device)
             print('batch_level', batch_level.clone().cpu().numpy())
             batch_x = [batch_x, batch_level]
         sp_z = data['space_key'][:, 0].reshape(-1, 1).to(device)
+        # print('sp_z', sp_z.clone().cpu().numpy())
 
         t2 = time.time()
         t_to_device.append(t2 - t1)
-
+        # print(net)
         if amp:
             with torch.cuda.amp.autocast():
                 if mode != 'train':
@@ -914,6 +589,7 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
                         pred = net(batch_x)
                 else:
                     pred = net(batch_x)
+                print('pred.shape', pred.size())
                 pred *= sp_z
                 batch_y *= sp_z
 
@@ -954,8 +630,10 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
         total_loss_mae += loss_mae.item()
         batch_idx += 1
 
-        p1 = threading.Thread(target=record_GPU_info)
-        p1.start()
+        if gpu_flag:
+            p1 = threading.Thread(target=record_GPU_info)
+            p1.start()
+            gpu_flag = False
 
         t0 = t3  # reset the t0
 
@@ -1232,7 +910,11 @@ def train(id: int):
         outs = 1
     else:
         outs = 5
-    net: torch.nn.Module = get_net_pos(args.net, outs, args.level_node)
+    net: torch.nn.Module = get_net_pos(name=args.net, nb_cls = outs, level_node = args.level_node)
+    net_parameters = futil.count_parameters(net)
+    net_parameters = str(round(net_parameters / 1024 / 1024, 2))  # convert to **.** M
+    log_dict['net_parameters'] = net_parameters
+
     data_dir = dataset_dir(args.resample_z)
     label_file = "dataset/SSc_DeepLearning/GohScores.xlsx"
     train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader(mypath, data_dir, label_file)
@@ -1337,7 +1019,7 @@ class Evaluater():
         self.dataloader = dataloader
         self.mode = mode
         self.mypath = mypath
-
+    # gpu_flag = True
     def run(self):
         for batch_data in self.dataloader:
             for idx in range(len(batch_data['image_key'])):
@@ -1349,9 +1031,10 @@ class Evaluater():
                 for patch, new_label, start in sliding_loader:
                     batch_x = patch.to(device)
 
-                    if self.mode == 'train':
-                        p1 = threading.Thread(target=record_GPU_info)
-                        p1.start()
+                    # if self.mode == 'train' and gpu_flag:
+                    #     p1 = threading.Thread(target=record_GPU_info)
+                    #     p1.start()
+                    #     gpu_flag = False
 
                     if amp:
                         with torch.cuda.amp.autocast():
@@ -1612,6 +1295,7 @@ if __name__ == "__main__":
         amp = False
         scaler = None
     log_dict['amp'] = amp
+    print('device', device)
 
     record_file: str = 'records_pos.csv'
     id: int = record_experiment(record_file)  # write super parameters from set_args.py to record file.
