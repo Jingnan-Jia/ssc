@@ -55,7 +55,7 @@ def mae(df):
     return mae_np, total_np
 
 
-def confusion(label_file, pred_file, label_nb=100, space=5):
+def confusion(label_file, pred_file, label_nb=100, space=5, cf_kp=True):
     print("Start the save of confsion matrix plot and csv for: ")
     print(label_file)
     print(pred_file)
@@ -125,25 +125,27 @@ def confusion(label_file, pred_file, label_nb=100, space=5):
         lower_ls.append(lower)
         upper_ls.append(upper)
 
-        # kappa2 = cohen_kappa_score(label.astype(int), pred.astype(int))
-        # print(f"unweighted kappa for {column} is {kappa2}")
+        if cf_kp:
+            kappa = cohen_kappa_score(label.astype(int), pred.astype(int), weights='linear',
+                                      labels=np.array(list(range(101))))
+            print(f"weighted kappa for {column} is {kappa}")
 
-        # f.savefig(basename + '/' + prefix + "_" + column + '_bland_altman.png')
-        # plt.close(f)
-        kappa = cohen_kappa_score(label.astype(int), pred.astype(int), weights='linear',
-                                  labels=np.array(list(range(101))))
         diff = pred.astype(int) - label.astype(int)
         ave_mae = np.mean(np.abs(diff))
         mean = np.mean(diff)
         std = np.std(diff)
 
-        print(f"weighted kappa for {column} is {kappa}")
         print(f"ave_mae for {column} is {ave_mae}")
         print(f"mean for {column} is {mean}")
         print(f"std for {column} is {std}")
         print(f"icc for {column} is {icc_all_ls[plot_id]}")
+        if ('valid' in os.path.basename(pred_file)) and ('validaug' not in os.path.basename(pred_file)):
+            out_dt['valid_ave_mae' + column] = ave_mae
+            out_dt['valid_mean' + column] = mean
+            out_dt['valid_std' + column] = std
+            out_dt['valid_icc' + column] = icc_all_ls[plot_id]
 
-        if len(df_label.columns) == 3:
+        if len(df_label.columns) == 3 and cf:
 
             pred[pred < 0] = 0
             pred[pred > label_nb] = label_nb
@@ -181,50 +183,14 @@ def confusion(label_file, pred_file, label_nb=100, space=5):
                 out_dt['valid_ave_Acc_' + column] = np.nanmean(acc_np)  # there may be some np.nan
                 out_dt['valid_ave_MAE_' + column] = np.nanmean(mae_np)
                 out_dt['valid_WKappa_' + column] = kappa
-                out_dt['valid_ave_mae' + column] = ave_mae
-                out_dt['valid_mean' + column] = mean
-                out_dt['valid_std' + column] = std
-                out_dt['valid_icc' + column] = icc_all_ls[plot_id]
 
             df.replace(0, np.nan, inplace=True)
             for idx, row in df.iterrows():
                 if pd.isna(df.at[idx, 'Acc']) and not pd.isna(df.at[idx, 'Total']):
                     df.at[idx, 'Acc'] = 0
-
             df.to_csv(basename + '/' + prefix + "_" + column + '_confusion.csv')
+            print("Finish confsion matrix plot and csv of ", column)
 
-        # save_figure = False
-        # if save_figure:
-        #     fig = plt.figure(figsize=(8, 5.5))
-        #     ax = sns.heatmap(df, annot=True, cmap="YlGnBu", fmt='.2f',
-        #                      cbar_kws={"orientation": "horizontal"})  # , cbar=False
-        #
-        #     for i in range(len(index_label)):
-        #         ax.add_patch(Rectangle((i + 1, i + 1), 1, 1, fill=False, edgecolor='blue', ls=':', lw=0.5))
-        #
-        #     for text in ax.texts:
-        #         text.set_size(10)
-        #         value = float(text.get_text())
-        #         if value > 99:
-        #             # pass
-        #             text.set_size(8)  # number with 3 digits need to show properly
-        #             # text.set_weight('bold')
-        #             # text.set_style('italic')
-        #
-        #     ax.set_facecolor('xkcd:salmon')
-        #     ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-        #     ax.set_xticklabels(ax.get_xticklabels(), rotation=0)
-        #     plt.xlabel('Prediction', fontsize=10)  # x-axis label with fontsize 15
-        #     plt.ylabel('Label', fontsize=10)  # y-axis label with fontsize 15
-        #
-        #     plt.tight_layout()
-        #     # plt.show()
-        #     fig.savefig(basename + '/' + prefix + "_" + column + '_confusion.png', dpi=fig.dpi)
-        #     plt.close(fig)
-
-        # colormap.set_bad("black")
-
-        print("Finish confsion matrix plot and csv of ", column)
 
     # plot the bland-altman plot of all data
     label = df_label.to_numpy().flatten().reshape(-1, 1)
@@ -234,6 +200,7 @@ def confusion(label_file, pred_file, label_nb=100, space=5):
     # f, ax = plt.subplots(1, figsize=(8, 5))
     # f = sm.graphics.mean_diff_plot(pred, label, ax=ax)
     # ax.set_title('All', fontsize=16)
+
     lower, upper = ax.get_ybound()  # set these plots as the same scale for comparison
     lower_ls.append(lower)
     upper_ls.append(upper)

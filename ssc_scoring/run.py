@@ -884,10 +884,6 @@ def resort_pts_for_convex(pts_ls: list) -> list:
     return new_pts_ls
 
 
-
-
-
-
 def gen_pts(nb_points: int, limit: int, radius: int) -> np.ndarray:
     pts_ls: list = []
     for i in range(nb_points):

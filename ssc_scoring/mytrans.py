@@ -4,6 +4,10 @@
 # @Email   : jiajingnan2222@gmail.com
 import random
 from typing import Dict, Optional, Union, Hashable, Mapping
+import pandas as pd
+import os
+import re
+
 
 import myutil.myutil as futil
 import numpy as np
@@ -34,7 +38,9 @@ class LoadDatad:
         data = {'image_key': data_x_np,  # original image
                 'label_in_patch_key': data_y_np,  # relative label (slice number) in  a patch, np.array with shape(-1, )
                 'label_in_img_key': data_y_np,  # label in  the whole image, keep fixed, a np.array with shape(-1, )
+                'ori_label_in_img_key': data_y_np,  # label in  the whole image, keep fixed, a np.array with shape(-1, )
                 'world_key': world_pos,  # world position in mm, keep fixed,  a np.array with shape(-1, )
+                'ori_world_key': world_pos,  # world position in mm, keep fixed,  a np.array with shape(-1, )
                 'space_key': sp,  # space,  a np.array with shape(-1, )
                 'origin_key': ori,  # origin,  a np.array with shape(-1, )
                 'fpath_key': fpath}  # full path, a string
@@ -160,7 +166,7 @@ class CropLevelRegiond:
             else:
                 raise Exception("Do not need CropLevelRegiond because level_node==0 and train_on_level==0")
 
-        d['label_in_img_key'] = np.array(d['label_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
+        d['label_in_img_key'] = np.array(d['ori_label_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
         label: int = d['label_in_img_key']  # z slice number
         lower: int = max(0, label - self.height)
         if self.rand_start:
@@ -189,21 +195,39 @@ class CropLevelRegiond:
 class CropCorseRegiond:
     """ """
 
-    def __init__(self, height, start, valid_data_fpath, valid_pred_world_fpath):
+    def __init__(self, level, height, start, data_fpath, pred_world_fpath):
+        self.level = level
+        self.level_name = "L" + str(self.level)
         self.height = height
         self.start = start
-        self.valid_data_fpath = valid_data_fpath
-        self.valid_pred_world_fpath = valid_pred_world_fpath
-        self.df = 1
-    def pred_of_id(self, img_id_str: str) -> int:
+        self.data_fpath = data_fpath
+        self.pred_world_fpath = pred_world_fpath
+        self.df_data = pd.read_csv(self.data_fpath, delimiter=',')
+        self.df_pred_world = pd.read_csv(self.pred_world_fpath, delimiter=',')
+        if len(self.df_pred_world)==(len(self.df_data)+1):  # df_data should not have header
+            self.df_data = pd.read_csv(self.data_fpath, header=None, delimiter=',')
+            self.df_data.columns = ['img_fpath', 'world_pos']
+        elif len(self.df_pred_world)==len(self.df_data):
+            pass
+        else:
+            raise Exception(f"the length of data: {len(self.df_data)} and pred_world: {len(self.df_pred_world)} is not the same")
 
-        return pred
+    def get_img_idx(self, image_fpath: str) -> int:
+        id_str = image_fpath.split("Pat_")[-1].split("_")[0]  # like: Pat_012
+        for i in range(len(self.df_data)):
+            if id_str in self.df_data['img_fpath'].iloc[i]:
+                return i
+        raise Exception(f"Can not find the image id from data file")
+
+    def corse_pred(self, image_fpath):
+        img_idx = self.get_img_idx(image_fpath)
+        level_pred = self.df_pred_world[self.level_name].iloc[img_idx]
+        return level_pred
 
 
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
         d = dict(data)
-        img_id = get_img_id(d['image_fpath'])
-        corse_pred: int = self.corse_pred_of_id(img_id)
+        corse_pred: int = self.corse_pred_of(d['image_fpath'])
 
         if self.height > d['image_key'].shape[0]:
             raise Exception(

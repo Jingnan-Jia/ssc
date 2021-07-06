@@ -35,6 +35,34 @@ from networks import med3d_resnet as med3d
 from networks import get_net_pos
 from path import Path
 
+
+
+class DAS:
+    """Device, amp, and scaler"""
+    def __init__(self, device, amp, scaler):
+        self.device = device
+        self.amp = amp
+        self.scaler = scaler
+
+
+def get_mae_best(fpath):
+    loss = pd.read_csv(fpath)
+    mae = min(loss['mae'].to_list())
+    return mae
+
+
+def eval_net_mae(eval_id: int, mypath: Path):
+    mypath2 = Path(eval_id)
+    shutil.copy(mypath2.model_fpath, mypath.model_fpath)  # make sure there is at least one model there
+    for mo in ['train', 'validaug', 'valid', 'test']:
+        try:
+            shutil.copy(mypath2.loss(mo), mypath.loss(mo))  # make sure there is at least one model
+        except FileNotFoundError:
+            pass
+    valid_mae_best = get_mae_best(mypath2.loss('valid'))
+    print(f'load model from {mypath2.model_fpath}, valid_mae_best is {valid_mae_best}')
+    return valid_mae_best
+
 def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int) -> pd.DataFrame:
     modes = ['train', 'validaug', 'valid']
     if args.if_test:
@@ -116,6 +144,8 @@ def record_1st(record_file, mode):
             df, new_id = get_df_id(record_file)
             if mode=='train':
                 mypath = Path(new_id, check_id_dir=True)  # to check if id_dir already exist
+            else:
+                mypath = Path(new_id)
 
             start_date = datetime.date.today().strftime("%Y-%m-%d")
             start_time = datetime.datetime.now().time().strftime("%H:%M:%S")
@@ -192,3 +222,47 @@ def time_diff(t1: datetime, t2: datetime):
     t_elapsed = t2 - t1
 
     return str(t_elapsed).split('.')[0]  # drop out microseconds
+
+
+
+def _bytes_to_megabytes(value_bytes):
+    return round((value_bytes / 1024) / 1024, 2)
+
+
+def record_mem_info():
+    ''' Memory usage in kB '''
+    with open('/proc/self/status') as f:
+        memusage = f.read().split('VmRSS:')[1].split('\n')[0][:-3]
+    print('int(memusage.strip())')
+
+    return int(memusage.strip())
+
+
+def record_GPU_info(outfile):
+    if outfile:
+        jobid_gpuid = args.outfile.split('-')[-1]
+        tmp_split = jobid_gpuid.split('_')[-1]
+        if len(tmp_split) == 2:
+            gpuid = tmp_split[-1]
+        else:
+            gpuid = 0
+        nvidia_smi.nvmlInit()
+        handle = nvidia_smi.nvmlDeviceGetHandleByIndex(gpuid)
+        gpuname = nvidia_smi.nvmlDeviceGetName(handle)
+        gpuname = gpuname.decode("utf-8")
+        # log_dict['gpuname'] = gpuname
+        info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+        gpu_mem_usage = str(_bytes_to_megabytes(info.used)) + '/' + str(_bytes_to_megabytes(info.total)) + ' MB'
+        # log_dict['gpu_mem_usage'] = gpu_mem_usage
+        gpu_util = 0
+        for i in range(5):
+            res = nvidia_smi.nvmlDeviceGetUtilizationRates(handle)
+            gpu_util += res.gpu
+            time.sleep(1)
+        gpu_util = gpu_util / 5
+        # log_dict['gpu_util'] = str(gpu_util) + '%'
+        return gpuname, gpu_mem_usage, str(gpu_util) + '%'
+    else:
+        print('outfile is None, can not show GPU memory info')
+    return None
+

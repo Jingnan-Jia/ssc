@@ -55,8 +55,9 @@ def get_xformd(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256
 
 
 class AllLoader:
-    def __init__(self, mypath, label_file, kfold_seed, fold, total_folds, ts_level_nb, level_node,
+    def __init__(self, resample_z, mypath, label_file, kfold_seed, fold, total_folds, ts_level_nb, level_node,
                  train_on_level, z_size, y_size, x_size, batch_size, workers):
+        self.resample_z = resample_z
         self.mypath = mypath
         self.label_file = label_file
         df_excel = pd.read_excel(self.label_file, engine='openpyxl')
@@ -105,7 +106,7 @@ class AllLoader:
         return x, y
 
     def split_dir_pats(self):
-        dir_pats = sorted(glob.glob(os.path.join(self.mypath.data_dir, "Pat_*CTimage.mha")))
+        dir_pats = sorted(glob.glob(os.path.join(self.mypath.dataset_dir(self.resample_z), "Pat_*CTimage.mha")))
         if len(dir_pats) == 0:  # does not find patients in this directory
             dir_pats = sorted(glob.glob(os.path.join(self.mypath.data_dir, "Pat_*CTimage_low.mha")))
             if len(dir_pats) == 0:

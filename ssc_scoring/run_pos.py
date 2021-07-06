@@ -33,79 +33,19 @@ from networks import med3d_resnet as med3d
 from networks import get_net_pos
 
 from mytrans import LoadDatad, MyNormalizeImagePosd, AddChannelPosd, RandomCropPosd, \
-    RandGaussianNoise, CenterCropPosd, CropLevelRegiond, ComposePosd
+    RandGaussianNoise, CenterCropPosd, CropLevelRegiond, ComposePosd, CropCorseRegiond
 from mydata import AllLoader
 from path import Path
-from tool import record_1st, record_2nd
+from tool import record_1st, record_2nd, record_GPU_info, eval_net_mae, DAS
+
 from myloss import get_loss
+from inference import record_best_preds
 
 
-class DatasetPos(Dataset):
-    """SSc scoring dataset."""
+def GPU_info(outfile):  # need to be in the main file because it will be executed by another thread
+    gpu_name, gpu_usage, gpu_utis = record_GPU_info(outfile)
+    log_dict['gpuname'], log_dict['gpu_mem_usage'], log_dict['gpu_util'] = gpu_name, gpu_usage, gpu_utis
 
-    def __init__(self, data: Sequence, xform: Union[Sequence[Callable], Callable] = None):
-        self.data = data
-        self.transform = xform
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        if self.transform:
-            data = self.transform(self.data[idx])
-        else:
-            data = self.data[idx]
-
-        data['image_key'] = torch.as_tensor(data['image_key'])
-        data['label_in_patch_key'] = torch.as_tensor(data['label_in_patch_key'])
-
-        return data
-
-
-def _bytes_to_megabytes(value_bytes):
-    return round((value_bytes / 1024) / 1024, 2)
-
-
-def record_mem_info():
-    ''' Memory usage in kB '''
-
-    with open('/proc/self/status') as f:
-        memusage = f.read().split('VmRSS:')[1].split('\n')[0][:-3]
-    print('int(memusage.strip())')
-
-    return int(memusage.strip())
-
-
-def record_cpu_info():
-    pass
-
-
-def record_GPU_info():
-    if args.outfile:
-        jobid_gpuid = args.outfile.split('-')[-1]
-        tmp_split = jobid_gpuid.split('_')[-1]
-        if len(tmp_split) == 2:
-            gpuid = tmp_split[-1]
-        else:
-            gpuid = 0
-        nvidia_smi.nvmlInit()
-        handle = nvidia_smi.nvmlDeviceGetHandleByIndex(gpuid)
-        gpuname = nvidia_smi.nvmlDeviceGetName(handle)
-        gpuname = gpuname.decode("utf-8")
-        log_dict['gpuname'] = gpuname
-        info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
-        gpu_mem_usage = str(_bytes_to_megabytes(info.used)) + '/' + str(_bytes_to_megabytes(info.total)) + ' MB'
-        log_dict['gpu_mem_usage'] = gpu_mem_usage
-        gpu_util = 0
-        for i in range(5):
-            res = nvidia_smi.nvmlDeviceGetUtilizationRates(handle)
-            gpu_util += res.gpu
-            time.sleep(1)
-        gpu_util = gpu_util / 5
-        log_dict['gpu_util'] = str(gpu_util) + '%'
     return None
 
 
@@ -124,7 +64,6 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
 
     t0 = time.time()
     t_load_data, t_to_device, t_train_per_step = [], [], []
-    gpu_flag = True
     for data in dataloader:
 
         t1 = time.time()
@@ -193,10 +132,9 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
         total_loss_mae += loss_mae.item()
         batch_idx += 1
 
-        if gpu_flag:
-            p1 = threading.Thread(target=record_GPU_info)
+        if 'gpuname' not in log_dict:
+            p1 = threading.Thread(target=GPU_info)
             p1.start()
-            gpu_flag = False
 
         t0 = t3  # reset the t0
 
@@ -237,27 +175,6 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
         return None
 
 
-def get_mae_best(fpath):
-    loss = pd.read_csv(fpath)
-    mae = min(loss['mae'].to_list())
-    return mae
-
-
-def eval_net_mae(eval_id: int, net: torch.nn.Module, mypath: Path):
-    mypath2 = Path(eval_id)
-    shutil.copy(mypath2.model_fpath, mypath.model_fpath)  # make sure there is at least one model there
-    for mo in ['train', 'validaug', 'valid', 'test']:
-        try:
-            shutil.copy(mypath2.loss(mo), mypath.loss(mo))  # make sure there is at least one model
-        except FileNotFoundError:
-            pass
-
-    net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))
-    valid_mae_best = get_mae_best(mypath2.loss('valid'))
-    print(f'load model from {mypath2.model_fpath}, valid_mae_best is {valid_mae_best}')
-    return net, valid_mae_best
-
-
 def compute_metrics(mypath: Path):
     for mode in ['train', 'valid', 'test', 'validaug']:
         try:
@@ -272,7 +189,7 @@ def compute_metrics(mypath: Path):
                 shutil.copy(mypath2.pred_world(mode),
                             mypath.pred_world(mode))  # make sure there is at least one modedel there
 
-            out_dt = confusion.confusion(mypath.world(mode), mypath.pred_world(mode), label_nb=args.z_size, space=1)
+            out_dt = confusion.confusion(mypath.world(mode), mypath.pred_world(mode), label_nb=args.z_size, space=1, cf_kp=False)
             log_dict.update(out_dt)
 
             icc_ = futil.icc(mypath.world(mode), mypath.pred_world(mode))
@@ -311,12 +228,14 @@ def train(id: int):
     log_dict['label_file'] = label_file
     log_dict['data_shuffle_seed'] = 49
 
-    all_loader = AllLoader(mypath, label_file, 49, args.fold, args.total_folds, args.ts_level_nb, args.level_node,
+    all_loader = AllLoader(args.resample_z, mypath, label_file, 49, args.fold, args.total_folds, args.ts_level_nb, args.level_node,
                  args.train_on_level, args.z_size, args.y_size, args.x_size, args.batch_size, args.workers)
     train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
     net = net.to(device)
     if args.eval_id:
-        net, valid_mae_best = eval_net_mae(args.eval_id, net, mypath)
+        valid_mae_best = eval_net_mae(args.eval_id, mypath)
+        net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))  # model_fpath need to exist
+
     else:
         valid_mae_best = 10000
 
@@ -344,160 +263,174 @@ def train(id: int):
     dataloader_dict = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader}
     if args.if_test:
         dataloader_dict.update({'test': test_dataloader})
-    record_best_preds(net, dataloader_dict, mypath)
+    record_best_preds(net, dataloader_dict, mypath, device, amp)
     compute_metrics(mypath)
     print('Finish all things!')
 
-
-def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1):
-    print(f'start load {fpath} for sliding window inference')
-    xforms = [LoadDatad(), MyNormalizeImagePosd()]
-
-        # xforms.append(CropLevelRegiond(args.level_node, args.train_on_level,
-        #                                height=args.z_size, rand_start=False, start=0))
-    trans = ComposePosd(xforms)
-
-
-    data = trans(data={'fpath_key': fpath, 'world_key': world_pos})
-
-    raw_x = data['image_key']
-    label = data['label_in_img_key']
-
-    assert raw_x.shape[0] > z_size
-    start_lower: int = label - z_size
-    start_higher: int = label + z_size
-    start_lower = max(0, start_lower)
-    start_higher = min(raw_x.shape[0], start_higher)
-
-    # ranges = raw_x.shape[0] - z_size
-    print(f'ranges: {start_lower} to {start_higher}')
-
-    batch_patch = []
-    batch_new_label = []
-    batch_start = []
-    i = 0
-
-    start = start_lower
-    while start < label:
-        if i < batch_size:
-            print(f'start: {start}, i: {i}')
-            crop = CropLevelRegiond(level_node=args.level_node, train_on_level=args.train_on_level, height=args.z_size, rand_start=False, start=start)
-            new_data = crop(data)
-            new_patch, new_label = new_data['image_key'], new_data['label_in_patch_key']
-            # patch: np.ndarray = raw_x[start:start + z_size]  # z, y, z
-            # patch = patch.astype(np.float32)
-            # new_label: torch.Tensor = label - start
-            new_patch = new_patch[None]  # add a channel
-            batch_patch.append(new_patch)
-            batch_new_label.append(new_label)
-            batch_start.append(start)
-
-            start += stride
-            i += 1
-
-        if start >= start_higher or i >= batch_size:
-            batch_patch = torch.tensor(np.array(batch_patch))
-            batch_new_label = torch.tensor(batch_new_label)
-            batch_start = torch.tensor(batch_start)
-
-            yield batch_patch, batch_new_label, batch_start
-
-            batch_patch = []
-            batch_new_label = []
-            batch_start = []
-            i = 0
-
-
-class Evaluater():
-    def __init__(self, net, dataloader, mode, mypath):
-        self.net = net
-        self.dataloader = dataloader
-        self.mode = mode
-        self.mypath = mypath
-    # gpu_flag = True
-    def run(self):
-        for batch_data in self.dataloader:
-            for idx in range(len(batch_data['image_key'])):
-                sliding_loader = SlidingLoader(batch_data['fpath_key'][idx], batch_data['world_key'][idx],
-                                               z_size=args.z_size, stride=args.infer_stride, batch_size=args.batch_size)
-                pred_in_img_ls = []
-                pred_in_patch_ls = []
-                label_in_patch_ls = []
-                for patch, new_label, start in sliding_loader:
-                    batch_x = patch.to(device)
-
-                    # if self.mode == 'train' and gpu_flag:
-                    #     p1 = threading.Thread(target=record_GPU_info)
-                    #     p1.start()
-                    #     gpu_flag = False
-
-                    if amp:
-                        with torch.cuda.amp.autocast():
-                            with torch.no_grad():
-                                pred = self.net(batch_x)
-                    else:
-                        with torch.no_grad():
-                            pred = self.net(batch_x)
-
-                    # pred = pred.cpu().detach().numpy()
-                    pred_in_patch = pred.cpu().detach().numpy()
-                    pred_in_patch_ls.append(pred_in_patch)
-
-                    start_np = start.numpy().reshape((-1, 1))
-                    pred_in_img = pred_in_patch + start_np  # re organize it to original coordinate
-                    pred_in_img_ls.append(pred_in_img)
-
-                    new_label_ = new_label + start_np
-                    label_in_patch_ls.append(new_label_)
-
-                pred_in_img_all = np.concatenate(pred_in_img_ls, axis=0)
-                pred_in_patch_all = np.concatenate(pred_in_patch_ls, axis=0)
-                label_in_patch_all = np.concatenate(label_in_patch_ls, axis=0)
-
-                batch_label: np.ndarray = batch_data['label_in_img_key'][idx].cpu().detach().numpy().astype('Int64')
-                batch_preds_ave: np.ndarray = np.mean(pred_in_img_all, 0)
-                batch_preds_int: np.ndarray = batch_preds_ave.astype('Int64')
-                batch_preds_world: np.ndarray = batch_preds_ave * batch_data['space_key'][idx][0].item() + \
-                                                batch_data['origin_key'][idx][0].item()
-                batch_world: np.ndarray = batch_data['world_key'][idx].cpu().detach().numpy()
-                head = ['L1', 'L2', 'L3', 'L4', 'L5']
-                if args.train_on_level:
-                    head = [head[args.train_on_level - 1]]
-                if idx < 5:
-                    futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '.csv',
-                                        pred_in_img_all, head=head)
-                    futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '_in_patch.csv',
-                                        pred_in_patch_all, head=head)
-                    futil.appendrows_to(
-                        self.mypath.label(self.mode).split('.csv')[0] + '_' + str(idx) + '_in_patch.csv',
-                        label_in_patch_all, head=head)
-
-                    pred_all_world = pred_in_img_all * batch_data['space_key'][idx][0].item() + \
-                                     batch_data['origin_key'][idx][0].item()
-                    futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '_world.csv',
-                                        pred_all_world, head=head)
-
-                if args.train_on_level:
-                    batch_label = np.array(batch_label).reshape(-1, )
-                    batch_preds_ave = np.array(batch_preds_ave).reshape(-1, )
-                    batch_preds_int = np.array(batch_preds_int).reshape(-1, )
-                    batch_preds_world = np.array(batch_preds_world).reshape(-1, )
-                    batch_world = np.array(batch_world).reshape(-1, )
-                futil.appendrows_to(self.mypath.label(self.mode), batch_label, head=head)  # label in image
-                futil.appendrows_to(self.mypath.pred(self.mode), batch_preds_ave, head=head)  # pred in image
-                futil.appendrows_to(self.mypath.pred_int(self.mode), batch_preds_int, head=head)
-                futil.appendrows_to(self.mypath.pred_world(self.mode), batch_preds_world, head=head)  # pred in world
-                futil.appendrows_to(self.mypath.world(self.mode), batch_world, head=head)  # 33 label in world
-
-
-def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoader], mypath: Path):
-    net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))  # load the best weights to do evaluation
-    net.eval()
-    for mode, dataloader in dataloader_dict.items():
-        evaluater = Evaluater(net, dataloader, mode, mypath)
-        evaluater.run()
-        # except:
-        #     continue
+#
+# def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid'):
+#     print(f'start load {fpath} for sliding window inference')
+#     xforms = [LoadDatad(), MyNormalizeImagePosd()]
+#
+#         # xforms.append(CropLevelRegiond(args.level_node, args.train_on_level,
+#         #                                height=args.z_size, rand_start=False, start=0))
+#     trans = ComposePosd(xforms)
+#
+#
+#     data = trans(data={'fpath_key': fpath, 'world_key': world_pos})
+#
+#     raw_x = data['image_key']
+#     data['label_in_img_key'] = np.array(data['label_in_img_key'][args.train_on_level - 1])
+#
+#     label = data['label_in_img_key']
+#     print('data_world_key', data['world_key'])
+#
+#     assert raw_x.shape[0] > z_size
+#     start_lower: int = label - z_size
+#     start_higher: int = label + z_size
+#     start_lower = max(0, start_lower)
+#     start_higher = min(raw_x.shape[0], start_higher)
+#
+#     # ranges = raw_x.shape[0] - z_size
+#     print(f'ranges: {start_lower} to {start_higher}')
+#
+#     batch_patch = []
+#     batch_new_label = []
+#     batch_start = []
+#     i = 0
+#
+#     start = start_lower
+#     while start < label:
+#         if i < batch_size:
+#             print(f'start: {start}, i: {i}')
+#             if args.infer_2nd:
+#                 mypath2 = Path(args.eval_id)
+#                 crop = CropCorseRegiond(level=args.train_on_level, height=args.z_size, start=start,
+#                                         data_fpath=mypath2.data(mode), pred_world_fpath=mypath2.pred_world(mode))
+#             else:
+#                 crop = CropLevelRegiond(level_node=args.level_node, train_on_level=args.train_on_level, height=args.z_size, rand_start=False, start=start)
+#             new_data = crop(data)
+#             new_patch, new_label = new_data['image_key'], new_data['label_in_patch_key']
+#             # patch: np.ndarray = raw_x[start:start + z_size]  # z, y, z
+#             # patch = patch.astype(np.float32)
+#             # new_label: torch.Tensor = label - start
+#             new_patch = new_patch[None]  # add a channel
+#             batch_patch.append(new_patch)
+#             batch_new_label.append(new_label)
+#             batch_start.append(start)
+#
+#             start += stride
+#             i += 1
+#
+#         if start >= start_higher or i >= batch_size:
+#             batch_patch = torch.tensor(np.array(batch_patch))
+#             batch_new_label = torch.tensor(batch_new_label)
+#             batch_start = torch.tensor(batch_start)
+#
+#             yield batch_patch, batch_new_label, batch_start
+#
+#             batch_patch = []
+#             batch_new_label = []
+#             batch_start = []
+#             i = 0
+#
+#
+# class Evaluater():
+#     def __init__(self, net, dataloader, mode, mypath):
+#         self.net = net
+#         self.dataloader = dataloader
+#         self.mode = mode
+#         self.mypath = mypath
+#     def run(self):
+#         for batch_data in self.dataloader:
+#             for idx in range(len(batch_data['image_key'])):
+#                 print('len_batch', len(batch_data))
+#                 print(batch_data['fpath_key'][idx], batch_data['ori_world_key'][idx])
+#                 sliding_loader = SlidingLoader(batch_data['fpath_key'][idx], batch_data['ori_world_key'][idx],
+#                                                z_size=args.z_size, stride=args.infer_stride, batch_size=args.batch_size,
+#                                                mode=args.mode)
+#                 pred_in_img_ls = []
+#                 pred_in_patch_ls = []
+#                 label_in_patch_ls = []
+#                 for patch, new_label, start in sliding_loader:
+#                     batch_x = patch.to(device)
+#                     if args.level_node != 0:
+#                         batch_level = torch.ones((len(batch_x), 1)) * args.train_on_level
+#                         batch_level = batch_level.to(device)
+#                         print('batch_level', batch_level.clone().cpu().numpy())
+#                         batch_x = [batch_x, batch_level]
+#
+#                     if 'gpuname' not in log_dict:
+#                         p1 = threading.Thread(target=record_GPU_info)
+#                         p1.start()
+#
+#                     if amp:
+#                         with torch.cuda.amp.autocast():
+#                             with torch.no_grad():
+#                                 pred = self.net(batch_x)
+#                     else:
+#                         with torch.no_grad():
+#                             pred = self.net(batch_x)
+#
+#                     # pred = pred.cpu().detach().numpy()
+#                     pred_in_patch = pred.cpu().detach().numpy()
+#                     pred_in_patch_ls.append(pred_in_patch)
+#
+#                     start_np = start.numpy().reshape((-1, 1))
+#                     pred_in_img = pred_in_patch + start_np  # re organize it to original coordinate
+#                     pred_in_img_ls.append(pred_in_img)
+#
+#                     new_label_ = new_label + start_np
+#                     label_in_patch_ls.append(new_label_)
+#
+#                 pred_in_img_all = np.concatenate(pred_in_img_ls, axis=0)
+#                 pred_in_patch_all = np.concatenate(pred_in_patch_ls, axis=0)
+#                 label_in_patch_all = np.concatenate(label_in_patch_ls, axis=0)
+#
+#                 batch_label: np.ndarray = batch_data['label_in_img_key'][idx].cpu().detach().numpy().astype(int)
+#                 batch_preds_ave: np.ndarray = np.mean(pred_in_img_all, 0)
+#                 batch_preds_int: np.ndarray = batch_preds_ave.astype(int)
+#                 batch_preds_world: np.ndarray = batch_preds_ave * batch_data['space_key'][idx][0].item() + \
+#                                                 batch_data['origin_key'][idx][0].item()
+#                 batch_world: np.ndarray = batch_data['world_key'][idx].cpu().detach().numpy()
+#                 head = ['L1', 'L2', 'L3', 'L4', 'L5']
+#                 if args.train_on_level:
+#                     head = [head[args.train_on_level - 1]]
+#                 if idx < 5:
+#                     futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '.csv',
+#                                         pred_in_img_all, head=head)
+#                     futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '_in_patch.csv',
+#                                         pred_in_patch_all, head=head)
+#                     futil.appendrows_to(
+#                         self.mypath.label(self.mode).split('.csv')[0] + '_' + str(idx) + '_in_patch.csv',
+#                         label_in_patch_all, head=head)
+#
+#                     pred_all_world = pred_in_img_all * batch_data['space_key'][idx][0].item() + \
+#                                      batch_data['origin_key'][idx][0].item()
+#                     futil.appendrows_to(self.mypath.pred(self.mode).split('.csv')[0] + '_' + str(idx) + '_world.csv',
+#                                         pred_all_world, head=head)
+#
+#                 if args.train_on_level:
+#                     batch_label = np.array(batch_label).reshape(-1, )
+#                     batch_preds_ave = np.array(batch_preds_ave).reshape(-1, )
+#                     batch_preds_int = np.array(batch_preds_int).reshape(-1, )
+#                     batch_preds_world = np.array(batch_preds_world).reshape(-1, )
+#                     batch_world = np.array(batch_world).reshape(-1, )
+#                 futil.appendrows_to(self.mypath.label(self.mode), batch_label, head=head)  # label in image
+#                 futil.appendrows_to(self.mypath.pred(self.mode), batch_preds_ave, head=head)  # pred in image
+#                 futil.appendrows_to(self.mypath.pred_int(self.mode), batch_preds_int, head=head)
+#                 futil.appendrows_to(self.mypath.pred_world(self.mode), batch_preds_world, head=head)  # pred in world
+#                 futil.appendrows_to(self.mypath.world(self.mode), batch_world, head=head)  # 33 label in world
+#
+#
+# def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoader], mypath: Path):
+#     net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))  # load the best weights to do evaluation
+#     net.eval()
+#     for mode, dataloader in dataloader_dict.items():
+#         evaluater = Evaluater(net, dataloader, mode, mypath, device, amp)
+#         evaluater.run()
+#         # except:
+#         #     continue
 
 
 if __name__ == "__main__":
@@ -513,8 +446,9 @@ if __name__ == "__main__":
         device = torch.device("cpu")
         amp = False
         scaler = None
-    log_dict['amp'] = amp
-    print('device', device)
+    das = DAS(device, amp, scaler)
+
+    log_dict['amp'] = das.amp
 
     record_file: str = 'records_pos.csv'
     id: int = record_1st(record_file, mode=args.mode) # write super parameters from set_args.py to record file.
