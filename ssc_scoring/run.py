@@ -33,13 +33,14 @@ from torchvision import transforms
 from torchvision.transforms import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, RandomAffine
 from tqdm import tqdm
 
-from ssc_scoring import confusion
+import confusion
 import cv2
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from statistics import mean
 import threading
+from set_args import args
 
 LogType = Optional[Union[int, float, str]]  # int includes bool
 log_dict: Dict[str, LogType] = {}  # a global dict to store variables saved to log files
@@ -1409,8 +1410,8 @@ def ssc_transformd(mode='train', synthesis=False):
     if mode in ['train', 'validaug']:
         if synthesis:
             xforms.append(SysthesisNewSampled(keys=keys,
-                                              retp_fpath="/data/jjia/ssc_scoring/dataset/special_samples/retp.mha",
-                                              gg_fpath="/data/jjia/ssc_scoring/dataset/special_samples/gg.mha",
+                                              retp_fpath="/data/jjia/ssc_scoring/ssc_scoring/dataset/special_samples/retp.mha",
+                                              gg_fpath="/data/jjia/ssc_scoring/ssc_scoring/dataset/special_samples/gg.mha",
                                               mode=mode))
         xforms.extend([
             AddChanneld(keys),
@@ -1904,7 +1905,7 @@ def train(id_: int):
         device = torch.device("cpu")
         amp = False
     log_dict['amp'] = amp
-
+    print(args.__dict__)
     net = get_net(args.net, 3) if args.r_c == "r" else get_net(args.net, 21)
 
     if args.train_recon:  # use ReconNet and corresponding dataset
@@ -2234,7 +2235,7 @@ def time_diff(t1: datetime.datetime, t2: datetime.datetime) -> str:
 
 
 if __name__ == "__main__":
-    from ssc_scoring.set_args import args
+
 
     record_file = 'records_700.csv'
     id = record_experiment(record_file)

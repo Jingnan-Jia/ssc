@@ -24,12 +24,12 @@ cp set_args.py slurmlogs/slurm-${job_id}_set_args.py  # backup setting
 
 #idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname=$(hostname)  --eval_id=1045  --fold=4 &
 
-#idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=1000 --net='vgg11_bn' --sys=1 --sampler=0 --sys_pro_in_0=0.5 --sys_ratio=0.0 --mode='train' --fold=2 --remark="vgg11, sys, batchsize=10, ellipselenth=100+200, nosampler, gen_gg_as_retp correctlys" &
-#idx=1; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=1000 --net='vgg11_bn' --sys=1 --sampler=0 --sys_pro_in_0=0.5 --sys_ratio=0.0 --mode='train' --fold=4 --remark="vgg11, sys, batchsize=10, ellipselenth=100+200, nosampler, gen_gg_as_retp correctlys" &
+idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=1000 --net='vgg11_bn' --sys=0 --sampler=0 --pretrained=0 --sys_pro_in_0=0.5 --sys_ratio=0.0 --mode='train' --fold=1 --remark="vgg11, sys, batchsize=10, ellipselenth=100+200, nosampler, gen_gg_as_retp correctlys" &
+idx=1; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=1000 --net='vgg11_bn' --sys=0 --sampler=0 --pretrained=0 --sys_pro_in_0=0.5 --sys_ratio=0.0 --mode='train' --fold=2 --remark="vgg11, sys, batchsize=10, ellipselenth=100+200, nosampler, gen_gg_as_retp correctlys" &
 
 
-idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=1 --eval_id=459 --level_node=0 --fold=3 --remark="" &
-idx=1; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=1 --eval_id=457 --level_node=0 --fold=4 --remark="" &
+#idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=1 --eval_id=459 --level_node=0 --fold=3 --remark="" &
+#idx=1; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>slurmlogs/slurm-${job_id}_$idx.err 1>slurmlogs/slurm-${job_id}_$idx.out --outfile=slurmlogs/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=1 --eval_id=457 --level_node=0 --fold=4 --remark="" &
 
 wait
 

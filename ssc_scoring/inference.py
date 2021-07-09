@@ -103,13 +103,14 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid'
 
 
 class Evaluater():
-    def __init__(self, net, dataloader, mode, mypath, device, amp, args):
+    def __init__(self, net, dataloader, mode, mypath, args):
         self.net = net
         self.dataloader = dataloader
         self.mode = mode
         self.mypath = mypath
-        self.device = device
-        self.amp = amp
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.net = self.net.to(self.device).eval()
+        self.amp = True if torch.cuda.is_available() else False
         self.args = args
 
     def run(self):
@@ -190,10 +191,9 @@ class Evaluater():
                 futil.appendrows_to(self.mypath.world(self.mode), batch_world, head=head)  # 33 label in world
 
 
-def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoader], mypath: Path, device, amp, args):
-    net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))  # load the best weights to do evaluation
-    net.eval()
+def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoader], mypath: Path, args):
+    net.load_state_dict(torch.load(mypath.model_fpath))  # load the best weights to do evaluation
     for mode, dataloader in dataloader_dict.items():
-        evaluater = Evaluater(net, dataloader, mode, mypath, device, amp, args)
+        evaluater = Evaluater(net, dataloader, mode, mypath, args)
         evaluater.run()
 
