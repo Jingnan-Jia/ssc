@@ -14,8 +14,8 @@ import nvidia_smi
 import pandas as pd
 from filelock import FileLock
 
-from mymodules.confusion_test import confusion
-from mymodules.path import PathPos as Path
+from ssc_scoring.mymodules.confusion_test import confusion
+from ssc_scoring.mymodules.path import PathPos as Path
 # from mymodules.set_args_pos import args
 
 
