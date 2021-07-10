@@ -2,23 +2,24 @@
 # @Time    : 4/9/21 8:00 PM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
+# generate ct images masked by lung and save them to the same directory as the original image.
+
 import glob
-import pandas as pd
-import SimpleITK as sitk
-import numpy as np
 import os
 
-from myutil.myutil import get_all_ct_names, load_itk, save_itk
-import matplotlib.pyplot as plt
+import pandas as pd
+from myutil.myutil import load_itk, save_itk
+from mymodules.path import PathPos as Path
 
+mypath = Path()
 
 abs_dir_path = os.path.dirname(os.path.realpath(__file__))
-ct_dir = abs_dir_path + "/dataset/SSc_DeepLearning"
+ct_dir = mypath.dataset_dir(resample_z=0)  # "/dataset/SSc_DeepLearning"
 
 ct_fpath = sorted(glob.glob(ct_dir + '/*/' + 'CTimage.mha'))
 lu_fpath = sorted(glob.glob(ct_dir + '/*/' + 'CTimage_lung.mha'))
 
-excel = "dataset/SSc_DeepLearning/GohScores.xlsx"
+excel = mypath.label_excel_fpath
 label_excel = pd.read_excel(excel, engine='openpyxl')
 pos: pd.DataFrame = pd.DataFrame(label_excel, columns=['PatID', 'L1_pos', 'L2_pos', 'L3_pos', 'L4_pos', 'L5_pos'])
 
@@ -42,10 +43,9 @@ for pos, ct_f, lu_f in zip(pos.iterrows(), ct_fpath, lu_fpath):
     slice_index_middle = [int((position - ori[0]) / sp[0]) for position in po.to_list()[1:]]
     slice_index_up = [i - 1 for i in slice_index_middle]
     slice_index_down = [i + 1 for i in slice_index_middle]
-    for up, middle, down, lv in zip(slice_index_up, slice_index_middle, slice_index_down, [1,2,3,4,5]):
-        save_itk(os.path.dirname(lu_f) + "/" + "Level" + str(lv) + "_up_lung_mask.mha", lu[up], ori, sp)
-        save_itk(os.path.dirname(lu_f) + "/" + "Level" + str(lv) + "_middle_lung_mask.mha", lu[middle], ori, sp)
-        save_itk(os.path.dirname(lu_f) + "/" + "Level" + str(lv) + "_down_lung_mask.mha", lu[down], ori, sp)
+    for up, middle, down, lv in zip(slice_index_up, slice_index_middle, slice_index_down, [1, 2, 3, 4, 5]):
+        save_itk(os.path.join(os.path.dirname(lu_f), "Level" + str(lv) + "_up_lung_mask.mha"), lu[up], ori, sp)
+        save_itk(os.path.join(os.path.dirname(lu_f), "Level" + str(lv) + "_middle_lung_mask.mha"), lu[middle], ori, sp)
+        save_itk(os.path.join(os.path.dirname(lu_f), "Level" + str(lv) + "_down_lung_mask.mha"), lu[down], ori, sp)
 
     print(lu_f)
-

@@ -1,8 +1,10 @@
-import pandas as pd
+# Used for the synthesis of label distribution
+
+import copy
+
 import matplotlib.pyplot as plt
 import numpy as np
-import os
-import copy
+
 
 def extract_label(file_fpath):
     score_disext, score_gg, score_retp = [], [], []
@@ -34,7 +36,7 @@ def extract_label(file_fpath):
                     pass
     fig = plt.figure(figsize=(20, 6))
     # x = np.arange(0, 105, 5)
-    bar_dt = {label: key for label, key in zip(np.arange(0, 21) * 5, np.zeros((21,)).astype(np.int))}
+    bar_dt = {label: key for label, key in zip(np.arange(0, 21) * 5, np.zeros((21,)).astype(int))}
 
     for idx, score in enumerate([score_disext, score_gg, score_retp]):
         score = [s // 5 * 5 for s in score]
@@ -83,5 +85,5 @@ def extract_label(file_fpath):
 
 
 if __name__ == '__main__':
-    path = "slurmlogs/slurm-96342_0.out"
+    path = "results/slurmlogs/slurm-96342_0.out"
     extract_label(file_fpath = path)

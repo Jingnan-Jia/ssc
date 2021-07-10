@@ -2,6 +2,8 @@
 # @Time    : 4/9/21 8:00 PM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
+# get the width and length of patch which can cover the whole lung.
+# (This is used to extract to crop the whole lung in the future)
 import glob
 import pandas as pd
 import SimpleITK as sitk

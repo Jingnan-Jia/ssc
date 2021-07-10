@@ -14,15 +14,15 @@ import myutil.myutil as futil
 import torch
 import torch.nn as nn
 
-import confusion
+from mymodules import confusion
 from inference import record_best_preds
-from mydata import AllLoader
-from myloss import get_loss
-from networks import get_net_pos
-from networks import med3d_resnet as med3d
-from path import Path
-from set_args_pos import args
-from tool import record_1st, record_2nd, record_GPU_info, eval_net_mae
+from mymodules.mydata import AllLoader
+from mymodules.myloss import get_loss
+from mymodules.networks import get_net_pos
+from mymodules.networks import med3d_resnet as med3d
+from mymodules.path import Path
+from mymodules.set_args_pos import args
+from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae
 
 
 def GPU_info(outfile):  # need to be in the main file because it will be executed by another thread

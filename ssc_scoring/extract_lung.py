@@ -2,15 +2,16 @@
 # @Time    : 4/10/21 11:59 AM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
+# Extract the lungs using morphological operations and save them to same directory with the original files
 from myutil.myutil import get_all_ct_names, load_itk, save_itk
 from scipy.ndimage import morphology
 import numpy as np
 import time
 from skimage.measure import label
-import matplotlib.pyplot as plt
+from mymodules.path import PathScore as Path
 
 
-def largest_connected_parts(bw_img, nb_need_saved=2):
+def largest_connected_parts(bw_img: np.ndarray, nb_need_saved=2):
     bw_img[:10] = 0  # exclude the noise at the edges
     bw_img[-10:] = 0
 
@@ -46,8 +47,8 @@ def largest_connected_parts(bw_img, nb_need_saved=2):
     print(f"all parts are found, prepare write result")
     return bw_img
 
-
-scan_files = get_all_ct_names("/data/jjia/ssc_scoring/dataset/SSc_DeepLearning", name_suffix="CTimage")
+mypath = Path()
+scan_files = get_all_ct_names(mypath.dataset_dir(resample_z=0), name_suffix="CTimage")
 
 for scan in scan_files:
 
