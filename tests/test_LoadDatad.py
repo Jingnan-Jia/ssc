@@ -8,7 +8,7 @@ import tempfile
 import os
 
 from parameterized import parameterized
-from ssc_scoring.mytrans import LoadDatad
+from ssc_scoring.mymodules.mytrans import LoadDatad
 import numpy as np
 import myutil.myutil as futil
 from tests.utils import Compare
@@ -25,7 +25,6 @@ TEST_CASE_Error = [
 
 ]
 
-
 TEST_CASE_1 = [
     {'world_key': np.array([1400]),
      'fpath_key': "./tests/data/abcd.mhd"},
@@ -33,9 +32,11 @@ TEST_CASE_1 = [
     {"image_key": np.ones((30, 40, 50)).astype(np.float32),
      "label_in_img_key": np.array([4800.]),
      "label_in_patch_key": np.array([4800.]),  # not sure
+     'ori_label_in_img_key': np.array([4800.]),
      'world_key': np.array([1400.]),
+     'ori_world_key': np.array([1400.]),
      'space_key': np.array([0.5, 0.3, 0.3]),  # space,  a np.array with shape(-1, )
-     'origin_key': np.array([-1000.,2.,3.]),  # origin,  a np.array with shape(-1, )
+     'origin_key': np.array([-1000., 2., 3.]),  # origin,  a np.array with shape(-1, )
      'fpath_key': "./tests/data/abcd.mhd"}  # full path, a string
 
 ]
@@ -46,10 +47,9 @@ class TestLoadDatad(unittest.TestCase):
     def test_LoadDatad_InputError(self, input_data):
         self.assertNotEqual(set(input_data.keys()), {'fpath_key', 'world_key'})
 
-
     @parameterized.expand([TEST_CASE_1])
     def test_LoadDatad(self, input_data, expected_out):
-        ts_data = np.ones((30, 40, 50)) # z, y, z
+        ts_data = np.ones((30, 40, 50))  # z, y, z
         with tempfile.TemporaryDirectory() as tempdir:
             input_data['fpath_key'] = os.path.join(tempdir, os.path.basename(input_data["fpath_key"]))
             futil.save_itk(filename=input_data["fpath_key"],
@@ -58,9 +58,6 @@ class TestLoadDatad(unittest.TestCase):
                            spacing=(0.5, 0.3, 0.3))
             result = LoadDatad()(input_data)
             Compare().go(result, expected_out)
-
-
-                # parent dir from tempfile is not fixed
 
 
 if __name__ == "__main__":

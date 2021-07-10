@@ -34,6 +34,7 @@ quick_test_var = "QUICKTEST"
 
 class Compare(unittest.TestCase):
     def go(self, result: Mapping, expected_out: Mapping):
+        self.assertEqual(set(result.keys()), set(expected_out.keys()))
         for k in result.keys():
             if type(expected_out[k]) is np.ndarray:
                 self.assertIsNone(np.testing.assert_allclose(result[k], expected_out[k], rtol=1e-5, atol=0))
