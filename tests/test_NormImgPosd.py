@@ -24,9 +24,8 @@ TEST_CASE_1 = [
 class TestNormImgPosd(unittest.TestCase):
     @parameterized.expand([TEST_CASE_1])
     def test_NormImgPosd(self, input_data, expected_out):
-        with tempfile.TemporaryDirectory() as tempdir:
-            result = NormImgPosd()(input_data)
-            Compare().go(result, expected_out)
+        result = NormImgPosd()(input_data)
+        Compare().go(result, expected_out)
 
 
 if __name__ == "__main__":
