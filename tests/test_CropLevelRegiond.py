@@ -12,7 +12,7 @@ from tests.utils import Compare
 TEST_CASE_3D_5Label_1 = [
     {"level_node": 1, "train_on_level": 1, "height": 200, "rand_start": False, "start": 400},
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -23,7 +23,7 @@ TEST_CASE_3D_5Label_1 = [
      'origin_key': np.array([-100, 200, 30]),  # origin,  a np.array with shape(-1, )
      'fpath_key': "/data/samples/abcd.mhd"},  # full path, a string
 
-    {"image_key": np.ones((200, 256, 256)),
+    {"image_key": np.ones((200, 20, 20)),
      "label_in_img_key": np.array([500]),
      "label_in_patch_key": np.array([100]),
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -41,7 +41,7 @@ TEST_CASE_3D_5Label_1 = [
 TEST_CASE_3D_5Label_2 = [
     {"level_node": 0, "train_on_level": 2, "height": 400, "rand_start": False, "start": 400},
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -50,7 +50,7 @@ TEST_CASE_3D_5Label_2 = [
      'world_key': np.array([1000, 1200, 1400, 1600, 1800]),
      },  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([600]),
      "label_in_patch_key": np.array([200]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -64,7 +64,7 @@ TEST_CASE_3D_5Label_2 = [
 TEST_CASE_3D_5Label_3 = [  # rand start
     {"level_node": 0, "train_on_level": 2, "height": 400, "rand_start": True, "start": 400},
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -73,7 +73,7 @@ TEST_CASE_3D_5Label_3 = [  # rand start
      'world_key': np.array([1000, 1200, 1400, 1600, 1800]),
      },  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([600]),
      "label_in_patch_key": np.array([100]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -87,7 +87,7 @@ TEST_CASE_3D_5Label_3 = [  # rand start
 TEST_CASE_3D_5Label_4 = [  # level:0, output 'level_key'
     {"level_node": 1, "train_on_level": 2, "height": 400, "rand_start": True, "start": 400},
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -96,7 +96,7 @@ TEST_CASE_3D_5Label_4 = [  # level:0, output 'level_key'
      'world_key': np.array([1000, 1200, 1400, 1600, 1800]),
      },  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([600]),
      "label_in_patch_key": np.array([100]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -110,7 +110,7 @@ TEST_CASE_3D_5Label_4 = [  # level:0, output 'level_key'
 TEST_CASE_3D_5Label_5 = [  # level:0, doesnot 'level_key' (Error)
     {"level_node": 1, "train_on_level": 0, "height": 400, "rand_start": True, "start": 400},
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -119,7 +119,7 @@ TEST_CASE_3D_5Label_5 = [  # level:0, doesnot 'level_key' (Error)
      'world_key': np.array([1000, 1200, 1400, 1600, 1800]),
      },  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([600]),
      "label_in_patch_key": np.array([100]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),

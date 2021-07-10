@@ -11,9 +11,9 @@ import numpy as np
 from tests.utils import Compare
 
 TEST_CASE_3D_5Label_Upper = [
-    {"z_size": 400, "y_size": 256, "x_size": 256},
+    {"z_size": 400, "y_size": 20, "x_size": 20},
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      'world_key': np.array([1000, 1200, 1400, 1600, 1800]),  # world position in mm, keep fixed,  a np.array with shape(-1, )
@@ -21,7 +21,7 @@ TEST_CASE_3D_5Label_Upper = [
      'origin_key': np.array([-100,200,30]),  # origin,  a np.array with shape(-1, )
      'fpath_key': "/data/samples/abcd.mhd"},  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": np.array([200, 300, 400, 400, 400]),
      'world_key': np.array([1000, 1200, 1400, 1600, 1800]),  # world position in mm, keep fixed,  a np.array with shape(-1, )
