@@ -61,7 +61,7 @@ TEST_CASE_3D_5Label_2 = [
      }  # full path, a string
 ]
 
-TEST_CASE_3D_5Label_3 = [  # rand start
+TEST_CASE_3D_5Label_3 = [  # "rand_start": True, test shape
     {"level_node": 0, "train_on_level": 2, "height": 400, "rand_start": True, "start": 400},
 
     {"image_key": np.ones((1000, 20, 20)),
@@ -84,7 +84,7 @@ TEST_CASE_3D_5Label_3 = [  # rand start
      }  # full path, a string
 ]
 
-TEST_CASE_3D_5Label_4 = [  # level:0, output 'level_key'
+TEST_CASE_3D_5Label_4 = [  # "rand_start": True, test shape
     {"level_node": 1, "train_on_level": 2, "height": 400, "rand_start": True, "start": 400},
 
     {"image_key": np.ones((1000, 20, 20)),
@@ -107,7 +107,7 @@ TEST_CASE_3D_5Label_4 = [  # level:0, output 'level_key'
      }  # full path, a string
 ]
 
-TEST_CASE_3D_5Label_5 = [  # level:0, doesnot 'level_key' (Error)
+TEST_CASE_3D_5Label_5 = [  # doesnot 'level_key' (Error)
     {"level_node": 1, "train_on_level": 0, "height": 400, "rand_start": True, "start": 400},
 
     {"image_key": np.ones((1000, 20, 20)),
