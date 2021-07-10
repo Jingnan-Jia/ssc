@@ -2,49 +2,25 @@
 # @Time    : 7/6/21 7:17 PM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
-import csv
-import datetime
-import glob
-import os
-import random
-import shutil
-import threading
-import time
-from statistics import mean
-from typing import Callable, Dict, List, Optional, Sequence, Union, Tuple, Hashable, Mapping
+from typing import Dict
 
 import monai
 import myutil.myutil as futil
 import numpy as np
-import nvidia_smi
-import pandas as pd
 import torch
-import torch.nn as nn
-import torchvision.models as models
-from filelock import FileLock
-from monai.transforms import ScaleIntensityRange, RandGaussianNoise
-from sklearn.model_selection import KFold
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
-import confusion
-import myresnet3d
-from networks import med3d_resnet as med3d
-from networks import get_net_pos
+from ssc_scoring.mymodules.mytrans import LoadDatad, NormImgPosd, CropLevelRegiond, CropCorseRegiond
+from ssc_scoring.mymodules.path import PathPos as Path
 
-from mytrans import LoadDatad, MyNormalizeImagePosd, AddChannelPosd, RandomCropPosd, \
-    RandGaussianNoise, CenterCropPosd, CropLevelRegiond, ComposePosd, CropCorseRegiond
-from mydata import AllLoader
-from path import Path
-from tool import record_GPU_info
 
 def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid', args=None):
     print(f'start load {fpath} for sliding window inference')
-    xforms = [LoadDatad(), MyNormalizeImagePosd()]
+    xforms = [LoadDatad(), NormImgPosd()]
 
-    trans = ComposePosd(xforms)
+    trans = monai.transforms.Compose(xforms)
 
-
-    data = trans(data={'fpath_key': fpath, 'world_key': world_pos})
+    data = trans({'fpath_key': fpath, 'world_key': world_pos})
 
     raw_x = data['image_key']
     data['label_in_img_key'] = np.array(data['label_in_img_key'][args.train_on_level - 1])
@@ -72,10 +48,19 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid'
             print(f'start: {start}, i: {i}')
             if args.infer_2nd:
                 mypath2 = Path(args.eval_id)
-                crop = CropCorseRegiond(level=args.train_on_level, height=args.z_size, start=start,
-                                        data_fpath=mypath2.data(mode), pred_world_fpath=mypath2.pred_world(mode))
+                crop = CropCorseRegiond(level_node=args.level_node,
+                                        train_on_level=args.train_on_level,
+                                        height=args.z_size,
+                                        rand_start=False,
+                                        start=start,
+                                        data_fpath=mypath2.data(mode),
+                                        pred_world_fpath=mypath2.pred_world(mode))
             else:
-                crop = CropLevelRegiond(level_node=args.level_node, train_on_level=args.train_on_level, height=args.z_size, rand_start=False, start=start)
+                crop = CropLevelRegiond(level_node=args.level_node,
+                                        train_on_level=args.train_on_level,
+                                        height=args.z_size,
+                                        rand_start=False,
+                                        start=start)
             new_data = crop(data)
             new_patch, new_label = new_data['image_key'], new_data['label_in_patch_key']
             # patch: np.ndarray = raw_x[start:start + z_size]  # z, y, z
@@ -119,7 +104,8 @@ class Evaluater():
                 print('len_batch', len(batch_data))
                 print(batch_data['fpath_key'][idx], batch_data['ori_world_key'][idx])
                 sliding_loader = SlidingLoader(batch_data['fpath_key'][idx], batch_data['ori_world_key'][idx],
-                                               z_size=self.args.z_size, stride=self.args.infer_stride, batch_size=self.args.batch_size,
+                                               z_size=self.args.z_size, stride=self.args.infer_stride,
+                                               batch_size=self.args.batch_size,
                                                mode=self.args.mode, args=self.args)
                 pred_in_img_ls = []
                 pred_in_patch_ls = []
@@ -196,4 +182,3 @@ def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoade
     for mode, dataloader in dataloader_dict.items():
         evaluater = Evaluater(net, dataloader, mode, mypath, args)
         evaluater.run()
-
