@@ -236,11 +236,11 @@ class CropCorseRegiond:
 
     def corse_pred(self, image_fpath):
         img_idx = self.get_img_idx(image_fpath)
-        level_pred = self.df_pred_world[self.train_on_level].iloc[img_idx]
+        level_pred = self.df_pred_world.iloc[img_idx].to_numpy()
         return level_pred
 
     def update_label(self, d):
-        corse_pred: int = self.corse_pred_of(d['fpath_key'])  # get corse predictions for this data
+        corse_pred: int = self.corse_pred(d['fpath_key'])  # get corse predictions for this data
         d['corse_pred_in_img_key'] = corse_pred
         return d
 
@@ -337,7 +337,7 @@ class CropCorseRegiond:
 #
 #     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
 #         d = dict(data)  # get data
-#         corse_pred: int = self.corse_pred_of(d['fpath_key'])  # get corse predictions for this data
+#         corse_pred: int = self.corse_pred(d['fpath_key'])  # get corse predictions for this data
 #         corse_pred = corse_pred[self.level - 1]
 #
 #         if self.height > d['image_key'].shape[0]:
