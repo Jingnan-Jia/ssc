@@ -15,18 +15,18 @@ import pandas as pd
 from filelock import FileLock
 
 from mymodules.confusion_test import confusion
-from mymodules.path import Path
-from mymodules.set_args_pos import args
+from mymodules.path import PathPos as Path
+# from mymodules.set_args_pos import args
 
 
-def compute_metrics(mypath: Path, args, log_dict):
+def compute_metrics(mypath: Path, eval_id=None, log_dict=None):
     for mode in ['train', 'valid', 'test', 'validaug']:
         try:
-            if args.eval_id:
-                mypath2 = Path(args.eval_id)
+            if eval_id is not None:
+                mypath2 = Path(eval_id)
                 shutil.copytree(mypath2.id_dir, mypath.id_dir)
 
-            out_dt = confusion(mypath.world(mode), mypath.pred_world(mode), label_nb=args.z_size, space=1, cf_kp=False)
+            out_dt = confusion(mypath.world(mode), mypath.pred_world(mode))
             log_dict.update(out_dt)
 
             icc_ = futil.icc(mypath.world(mode), mypath.pred_world(mode))
@@ -34,6 +34,7 @@ def compute_metrics(mypath: Path, args, log_dict):
         except FileNotFoundError:
             continue
     return log_dict
+
 
 def get_mae_best(fpath):
     loss = pd.read_csv(fpath)
@@ -53,10 +54,9 @@ def eval_net_mae(eval_id: int, mypath: Path):
     print(f'load model from {mypath2.model_fpath}, valid_mae_best is {valid_mae_best}')
     return valid_mae_best
 
-def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int) -> pd.DataFrame:
-    modes = ['train', 'validaug', 'valid']
-    if args.if_test:
-        modes.append('test')
+
+def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int, args) -> pd.DataFrame:
+    modes = ['train', 'validaug', 'valid', 'test']
     metrics_min = 'mae'
     df.at[index, 'metrics_min'] = 'mae'
 
@@ -127,12 +127,18 @@ def get_df_id(record_file: str):
     return df, new_id
 
 
-def record_1st(record_file, mode):
+def record_1st(record_file, args):
+    """
+    First record in this experiment.
+    :param record_file: a file to store super parameters and metrics
+    :param args: arguments which need to be saved to record_file
+    :return: None
+    """
     lock = FileLock(record_file + ".lock")  # lock the file, avoid other processes write other things
     with lock:  # with this lock,  open a file for exclusive access
         with open(record_file, 'a') as csv_file:
             df, new_id = get_df_id(record_file)
-            if mode=='train':
+            if args.mode=='train':
                 mypath = Path(new_id, check_id_dir=True)  # to check if id_dir already exist
             else:
                 mypath = Path(new_id)
@@ -155,7 +161,16 @@ def record_1st(record_file, mode):
             write_and_backup(df, record_file, mypath)
     return new_id
 
-def record_2nd(record_file, current_id, log_dict):
+
+def record_2nd(record_file, current_id, log_dict, args):
+    """
+    Second time to save logs
+    :param record_file:
+    :param current_id:
+    :param log_dict: containing super parameters
+    :param args: used to get metrics
+    :return:
+    """
     lock = FileLock(record_file + ".lock")
     with lock:  # with this lock,  open a file for exclusive access
         df = pd.read_csv(record_file)
@@ -180,7 +195,7 @@ def record_2nd(record_file, current_id, log_dict):
         df.at[index, 'elapsed_time'] = elapsed_time
 
         mypath = Path(current_id)  # evaluate old model
-        df = add_best_metrics(df, mypath, index)
+        df = add_best_metrics(df, mypath, index, args)
 
         for key, value in log_dict.items():  # convert numpy to str before writing all log_dict to csv file
             if type(value) in [np.ndarray, list]:
@@ -205,14 +220,12 @@ def record_2nd(record_file, current_id, log_dict):
         write_and_backup(df, record_file, mypath)
 
 
-
 def time_diff(t1: datetime, t2: datetime):
     # t1_date = datetime.datetime(t1.year, t1.month, t1.day, t1.hour, t1.minute, t1.second)
     # t2_date = datetime.datetime(t2.year, t2.month, t2.day, t2.hour, t2.minute, t2.second)
     t_elapsed = t2 - t1
 
     return str(t_elapsed).split('.')[0]  # drop out microseconds
-
 
 
 def _bytes_to_megabytes(value_bytes):
@@ -230,7 +243,7 @@ def record_mem_info():
 
 def record_GPU_info(outfile):
     if outfile:
-        jobid_gpuid = args.outfile.split('-')[-1]
+        jobid_gpuid = outfile.split('-')[-1]
         tmp_split = jobid_gpuid.split('_')[-1]
         if len(tmp_split) == 2:
             gpuid = tmp_split[-1]
