@@ -3,38 +3,19 @@
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
 import csv
-import datetime
 import glob
 import os
-import random
-import shutil
-import threading
-import time
-from statistics import mean
-from typing import Callable, Dict, List, Optional, Sequence, Union, Tuple, Hashable, Mapping
+from typing import List, Union, Tuple
 
 import monai
-import myutil.myutil as futil
 import numpy as np
-import nvidia_smi
 import pandas as pd
-import torch
-import torch.nn as nn
-import torchvision.models as models
-from filelock import FileLock
-from monai.transforms import ScaleIntensityRange, RandGaussianNoise
 from sklearn.model_selection import KFold
-from torch.utils.data import Dataset, DataLoader
-from torch.utils.data import WeightedRandomSampler
+from torch.utils.data import DataLoader
 
-import confusion
-import myresnet3d
-from set_args_pos import args
-from networks import med3d_resnet as med3d
-from networks import get_net_pos
+from ssc_scoring.mymodules.mytrans import LoadDatad, NormImgPosd, AddChannelPosd, RandomCropPosd, \
+    CenterCropPosd, CropLevelRegiond
 
-from mytrans import LoadDatad, MyNormalizeImagePosd, AddChannelPosd, RandomCropPosd, \
-    RandGaussianNoise, CenterCropPosd, CropLevelRegiond, ComposePosd
 
 def get_xformd(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256, x_size=256):
     xforms = [LoadDatad()]
@@ -48,7 +29,7 @@ def get_xformd(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256
         else:
             xforms.extend([CenterCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
 
-    xforms.extend([MyNormalizeImagePosd(), AddChannelPosd()])
+    xforms.extend([NormImgPosd(), AddChannelPosd()])
     transform = monai.transforms.Compose(xforms)
 
     return transform

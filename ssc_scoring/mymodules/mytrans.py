@@ -190,12 +190,29 @@ class CropLevelRegiond:
 
 
 class CropCorseRegiond:
-    """ """
+    """
+    Only keep the label of the current level: label_in_img.shape=(1,), label_in_patch.shape=(1,)
+    and add a level_key to data dick.
+    """
 
-    def __init__(self, level, height, start, data_fpath, pred_world_fpath):
-        self.level = level
-        self.level_name = "L" + str(self.level)
+    def __init__(self,
+                 level_node: int,
+                 train_on_level: int,
+                 height: int,
+                 rand_start: bool,
+                 start: Optional[int] = None,
+                 data_fpath: Optional[str] = None,
+                 pred_world_fpath: Optional[str] = None):
+        """
+
+        :param level: int
+        :param rand_start: during training (rand_start=True), inference (rand_start=False).
+        :param start: If rand_start is True, start would be ignored.
+        """
+        self.level_node = level_node
+        self.train_on_level = train_on_level
         self.height = height
+        self.rand_start = rand_start
         self.start = start
         self.data_fpath = data_fpath
         self.pred_world_fpath = pred_world_fpath
@@ -209,6 +226,7 @@ class CropCorseRegiond:
         else:
             raise Exception(f"the length of data: {len(self.df_data)} and pred_world: {len(self.df_pred_world)} is not the same")
 
+
     def get_img_idx(self, image_fpath: str) -> int:
         id_str = image_fpath.split("Pat_")[-1].split("_")[0]  # like: Pat_012
         for i in range(len(self.df_data)):
@@ -218,19 +236,31 @@ class CropCorseRegiond:
 
     def corse_pred(self, image_fpath):
         img_idx = self.get_img_idx(image_fpath)
-        level_pred = self.df_pred_world[self.level_name].iloc[img_idx]
+        level_pred = self.df_pred_world[self.train_on_level].iloc[img_idx]
         return level_pred
 
+    def update_label(self, d):
+        corse_pred: int = self.corse_pred_of(d['fpath_key'])  # get corse predictions for this data
+        d['corse_pred_in_img_key'] = corse_pred
+        return d
 
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
         d = dict(data)
-        corse_pred: int = self.corse_pred_of(d['image_fpath'])
-
+        d = self.update_label(d)
         if self.height > d['image_key'].shape[0]:
             raise Exception(
                 f"desired height {self.height} is greater than image size along z {d['image_key'].shape[0]}")
 
-        label: int = corse_pred # z slice number
+        if self.train_on_level != 0:
+            self.level = self.train_on_level  # only input data from this level
+        else:
+            if self.level_node!=0:
+                self.level = random.randint(1, 5)  # 1,2,3,4,5 level is randomly selected
+            else:
+                raise Exception("Do not need CropLevelRegiond because level_node==0 and train_on_level==0")
+
+        d['label_in_img_key'] = np.array(d['corse_pred_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
+        label: int = d['label_in_img_key']  # z slice number
         lower: int = max(0, label - self.height)
         if self.rand_start:
             start = random.randint(lower, label)  # between lower and label
@@ -247,7 +277,6 @@ class CropCorseRegiond:
             start = end - self.height
         d['image_key'] = d['image_key'][start: end].astype(np.float32)
 
-        d['label_in_img_key'] = np.array(d['label_in_img_key'][self.level - 1]).reshape(-1, )
         d['label_in_patch_key'] = d['label_in_img_key'] - start
 
         d['world_key'] = np.array(d['world_key'][self.level - 1]).reshape(-1, )
@@ -255,6 +284,78 @@ class CropCorseRegiond:
 
         return d
 
+#
+# class CropCorseRegiond:
+#     """
+#     1. Receive a data dict, get the file fpath,
+#     2. Get its 5-level predictions from corse results.
+#     3. Get one patches whose center is the {level}th predicted positions.
+#     """
+#
+#     def __init__(self, level, height, data_fpath, pred_world_fpath):
+#         self.level = level
+#         self.level_name = "L" + str(self.level)
+#         self.height = height
+#         self.start = start
+#         self.data_fpath = data_fpath
+#         self.pred_world_fpath = pred_world_fpath
+#         self.df_data = pd.read_csv(self.data_fpath, delimiter=',')
+#         self.df_pred_world = pd.read_csv(self.pred_world_fpath, delimiter=',')
+#         if len(self.df_pred_world)==(len(self.df_data)+1):  # df_data should not have header
+#             self.df_data = pd.read_csv(self.data_fpath, header=None, delimiter=',')
+#             self.df_data.columns = ['img_fpath', 'world_pos']
+#         elif len(self.df_pred_world)==len(self.df_data):
+#             pass
+#         else:
+#             raise Exception(f"the length of data: {len(self.df_data)} and pred_world: {len(self.df_pred_world)} is not the same")
+#
+#     def get_img_idx(self, image_fpath: str) -> int:
+#         id_str = image_fpath.split("Pat_")[-1].split("_")[0]  # like: Pat_012
+#         for i in range(len(self.df_data)):
+#             if id_str in self.df_data['img_fpath'].iloc[i]:
+#                 return i
+#         raise Exception(f"Can not find the image id from data file")
+#
+#     def corse_pred(self, image_fpath):
+#         img_idx = self.get_img_idx(image_fpath)
+#         level_pred = self.df_pred_world[self.level_name].iloc[img_idx]
+#         return level_pred
+#
+#     def crop(self, img, label_img):
+#         start = label_img - self.height
+#         end = label_img + self.height
+#         if start < 0:
+#             start = 0
+#             end = self.height
+#         if end > img.shape[0]:
+#             end = img.shape[0]
+#             start = end - self.height
+#
+#         patch = img[start, end]
+#         return patch
+#
+#
+#     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
+#         d = dict(data)  # get data
+#         corse_pred: int = self.corse_pred_of(d['fpath_key'])  # get corse predictions for this data
+#         corse_pred = corse_pred[self.level - 1]
+#
+#         if self.height > d['image_key'].shape[0]:
+#             raise Exception(
+#                 f"desired height {self.height} is greater than image size along z {d['image_key'].shape[0]}")
+#
+#         patch = self.crop(d['image_key'], corse_pred)
+#
+#         d['image_key'] = patch.astype(np.float32)
+#
+#         d['label_in_img_key'] = np.array(d['label_in_img_key'][self.level - 1]).reshape(-1, )
+#         d['label_in_patch_key'] = d['label_in_img_key'] - start
+#
+#         d['world_key'] = np.array(d['world_key'][self.level - 1]).reshape(-1, )
+#         d['level_key'] = np.array(self.level).reshape(-1, )
+#
+#         return d
+#
 
 # class ComposePosd:
 #     """My Commpose to handle with img and label at the same time.

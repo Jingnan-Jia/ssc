@@ -220,7 +220,7 @@ def train(id: int, log_dict: dict):
     dataloader_dict = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader}
     dataloader_dict.update({'test': test_dataloader})
     record_best_preds(net, dataloader_dict, mypath, args)
-    log_dict = compute_metrics(mypath, args, log_dict)
+    log_dict = compute_metrics(mypath, args.eval_id, log_dict)
     print('Finish all things!')
     return log_dict
 
@@ -232,6 +232,6 @@ if __name__ == "__main__":
     log_dict: LogDict = {}  # a global dict to store immutable variables saved to log files
 
     record_file: str = PathInit().record_file
-    id: int = record_1st(record_file, mode=args.mode) # write super parameters from set_args.py to record file.
+    id: int = record_1st(record_file, args) # write super parameters from set_args.py to record file.
     log_dict = train(id, log_dict)
     record_2nd(record_file, current_id=id, log_dict=log_dict)  # write other parameters and metrics to record file.

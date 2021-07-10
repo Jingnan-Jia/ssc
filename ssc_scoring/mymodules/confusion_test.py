@@ -14,7 +14,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from sklearn.metrics import cohen_kappa_score
-import ssc_scoring.my_bland as sm
+import ssc_scoring.mymodules.my_bland as sm
 import numpy as np
 import matplotlib
 import myutil.myutil as futil
@@ -57,52 +57,38 @@ def mae(df):
     total_np = np.array(total_ls)
     return mae_np, total_np
 
+def read_check(file_fpath=None) -> pd.DataFrame:
+    df = pd.read_csv(file_fpath)
+    if df.columns[0] == "ID":
+        del df["ID"]
+        del df["Level"]
 
-def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=None, adap_markersize=1):
-    print("Start the save of confsion matrix plot and csv for: ")
-    print(label_file)
-    print(pred_file)
-    # df_label = pd.read_csv(label_file, header=None)
-    # if df_label.iloc[0,0] not in ['L1_pos', 'disext']:
-    #     if len(df_label.columns)==5:
-    #         columns = ['L1_pos', 'L2_pos', 'L3_pos', 'L4_pos', 'L5_pos']
-    #     else:
-    #         columns = ['disext', 'gg', 'retp']
-    df_label = pd.read_csv(label_file)
-    df_pred = pd.read_csv(pred_file)
-    for df in [df_label, df_pred]:
-        if df.columns[0] == "ID":
-            del df["ID"]
-            del df["Level"]
-
-    if df_label.columns[0] not in ['L1_pos', 'L1', 'disext']:
-        df_label = pd.read_csv(label_file, header=None)
-        if len(df_label.columns)==5:
+    if df.columns[0] not in ['L1_pos', 'L1', 'L2', 'L3', 'L4', 'L5', 'disext']:
+        df = pd.read_csv(file_fpath, header=None)
+        if len(df.columns)==5:
             columns = ['L1', 'L2', 'L3', 'L4', 'L5']
-        elif len(df_label.columns)==3:
-            columns = ['TOT', 'GG', 'RETP']
+        elif len(df.columns)==3:
+            columns = ['TOT', 'GG', 'RET']
         else:
             columns = ['unknown']
-        df_label.columns= columns
+        df.columns= columns
 
-    if df_pred.columns[0] not in ['L1_pos', 'L1', 'disext']:
-        df_pred = pd.read_csv(pred_file, header=None)
-        if len(df_pred.columns)==5:
-            columns = ['L1', 'L2', 'L3', 'L4', 'L5']
-        elif len(df_pred.columns)==3:
-            columns = ['TOT', 'GG', 'RETP']
-        else:
-            columns = ['unknown']
-        df_pred.columns = columns
+    return df
 
-    if len(df_label.columns)==3:
-        df_label.columns = ["TOT", "GG", "RETP"]
-        df_pred.columns = ["TOT", "GG", "RETP"]
+
+
+def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1):
+    print(f"Start the save of confsion matrix plot and csv for label: {label_file} and pred: {pred_file}")
+
+    df_label = read_check(file_fpath=label_file)
+    df_pred = read_check(file_fpath=pred_file)
+    print('len_df_label', len(df_label))
+
+
     # if len(df_label.columns) == 5:
     #     df_pred -= 32
     # df_label = df_label.head(18) # pred_1 = "/data/jjia/ssc_scoring/LK_time2_18patients.csv"
     # df_pred = df_pred.head(18) #label_1 = "/data/jjia/ssc_scoring/ground_truth_18_patients.csv"
-    print('len_df_label', len(df_label))
     out_dt = {}
     lower_y_ls, upper_y_ls = [], []
     lower_x_ls, upper_x_ls = [], []
@@ -127,8 +113,6 @@ def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=
 
     basename = os.path.dirname(pred_file)
     prefix = pred_file.split("/")[-1].split("_")[0]
-    icc_all = futil.icc(label_file, pred_file)
-    icc_all_ls = [icc_all[t] for t in list(icc_all)]
     import matplotlib.cm as cm
     colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
 
@@ -147,12 +131,6 @@ def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=
 
         # f, ax = plt.subplots(1, figsize=(8, 5))
         scatter_kwds = {'c': colors[plot_id], 'label': column}
-        print('scatter_kwd', scatter_kwds)
-
-
-            # df_label.columns[0] = "TOT"
-            # df_label.columns[1] = "GG"
-            # df_label.columns[2] = "RETP"
 
         if bland_in_1_mean_std is None or plot_id == len(df_label.columns)-1:
             if bland_in_1_mean_std is not None:
@@ -199,6 +177,7 @@ def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=
         upper_y_ls.append(upper_y)
         lower_x_ls.append(lower_x)
         upper_x_ls.append(upper_x)
+
         diff = pred.astype(int) - label.astype(int)
         abs_diff = np.abs(diff)
         ave_mae = np.mean(abs_diff)
@@ -211,7 +190,6 @@ def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=
 
         print(f"mean for {column} is {mean}")
         print(f"std for {column} is {std}")
-        print(f"icc for {column} is {icc_all_ls[plot_id]}")
 
 
 
@@ -222,10 +200,10 @@ def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=
 
 
             pred[pred < 0] = 0
-            pred[pred > label_nb] = label_nb
+            pred[pred > 100] = 100
 
-            index_label = list(range(0, label_nb + 1, space))
-            index_pred = list(range(0, label_nb + 1, space))
+            index_label = list(range(0, 101, 5))
+            index_pred = list(range(0, 101, 5))
 
             df = pd.DataFrame(0, index=index_label, columns=index_pred)
             scores = np.concatenate([label, pred], axis=1)
@@ -253,7 +231,6 @@ def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=
 
             df.loc[0, 'mean'] = mean
             df.loc[0, 'std'] = std
-            df.loc[0, 'icc'] = icc_all_ls[plot_id]
 
             if 'valid' in pred_file:
                 out_dt['valid_ave_Acc_' + column] = np.nanmean(acc_np)  # there may be some np.nan
@@ -264,7 +241,6 @@ def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=
 
                 out_dt['valid_mean' + column] = mean
                 out_dt['valid_std' + column] = std
-                out_dt['valid_icc' + column] = icc_all_ls[plot_id]
 
             df.replace(0, np.nan, inplace=True)
             for idx, row in df.iterrows():
@@ -277,7 +253,6 @@ def confusion(label_file, pred_file, label_nb=100, space=5, bland_in_1_mean_std=
 
         print("Finish confsion matrix plot and csv of ", column)
 
-    print(f"icc for all is {icc_all_ls[-1]}")
 
     # plot the bland-altman plot of all data
     if bland_in_1_mean_std:
