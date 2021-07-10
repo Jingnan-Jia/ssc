@@ -142,7 +142,7 @@ class Evaluater():
                 label_in_patch_all = np.concatenate(label_in_patch_ls, axis=0)
 
                 batch_label: np.ndarray = batch_data['label_in_img_key'][idx].cpu().detach().numpy().astype(int)
-                batch_preds_ave: np.ndarray = np.mean(pred_in_img_all, 0)
+                batch_preds_ave: np.ndarray = np.median(pred_in_img_all, 0)  # todo: compare mean and medial!
                 batch_preds_int: np.ndarray = batch_preds_ave.astype(int)
                 batch_preds_world: np.ndarray = batch_preds_ave * batch_data['space_key'][idx][0].item() + \
                                                 batch_data['origin_key'][idx][0].item()
