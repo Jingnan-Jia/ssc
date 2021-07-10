@@ -5,7 +5,7 @@
 
 import unittest
 from parameterized import parameterized
-from ssc_scoring.mytrans import CropLevelRegiond
+from ssc_scoring.mymodules.mytrans import CropLevelRegiond
 import numpy as np
 from tests.utils import Compare
 

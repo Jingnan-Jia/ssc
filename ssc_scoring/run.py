@@ -33,14 +33,14 @@ from torchvision import transforms
 from torchvision.transforms import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, RandomAffine
 from tqdm import tqdm
 
-import confusion
+from mymodules.confusion import confusion
 import cv2
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from statistics import mean
 import threading
-from set_args import args
+from mymodules.set_args import args
 
 LogType = Optional[Union[int, float, str]]  # int includes bool
 log_dict: Dict[str, LogType] = {}  # a global dict to store variables saved to log files
@@ -2014,7 +2014,7 @@ def train(id_: int):
                 shutil.copy(mypath2.pred_end5(mode), mypath.pred_end5(mode))  # make sure there is at least one model there
 
             if args.train_recon == 0:
-                out_dt = confusion.confusion(mypath.label(mode), mypath.pred_end5(mode))
+                out_dt = confusion(mypath.label(mode), mypath.pred_end5(mode))
                 log_dict.update(out_dt)
                 icc_ = futil.icc(mypath.label(mode), mypath.pred_end5(mode))
                 log_dict.update(icc_)

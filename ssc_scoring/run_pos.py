@@ -2,9 +2,9 @@
 # @Time    : 3/3/21 12:25 PM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
+# log_dict is used to record super parameters and metrics
 import csv
 import os
-import shutil
 import threading
 import time
 from statistics import mean
@@ -14,15 +14,15 @@ import myutil.myutil as futil
 import torch
 import torch.nn as nn
 
-from mymodules import confusion
-from inference import record_best_preds
+from mymodules.inference import record_best_preds
 from mymodules.mydata import AllLoader
 from mymodules.myloss import get_loss
 from mymodules.networks import get_net_pos
 from mymodules.networks import med3d_resnet as med3d
-from mymodules.path import Path
+from mymodules.path import PathPos, PathInit
+
 from mymodules.set_args_pos import args
-from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae
+from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae, compute_metrics
 
 
 def GPU_info(outfile):  # need to be in the main file because it will be executed by another thread
@@ -157,21 +157,6 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
         return None
 
 
-def compute_metrics(mypath: Path, args, log_dict):
-    for mode in ['train', 'valid', 'test', 'validaug']:
-        try:
-            if args.eval_id:
-                mypath2 = Path(args.eval_id)
-                shutil.copytree(mypath2.id_dir, mypath.id_dir)
-
-            out_dt = confusion.confusion(mypath.world(mode), mypath.pred_world(mode), label_nb=args.z_size, space=1, cf_kp=False)
-            log_dict.update(out_dt)
-
-            icc_ = futil.icc(mypath.world(mode), mypath.pred_world(mode))
-            log_dict.update(icc_)
-        except FileNotFoundError:
-            continue
-    return log_dict
 
 
 def get_kd_net(net_name: str) -> nn.Module:
@@ -189,8 +174,8 @@ def get_kd_net(net_name: str) -> nn.Module:
     return net
 
 
-def train(id: int, log_dict):
-    mypath = Path(id)
+def train(id: int, log_dict: dict):
+    mypath = PathPos(id)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     if args.train_on_level or args.level_node:
         outs = 1
@@ -235,16 +220,18 @@ def train(id: int, log_dict):
     dataloader_dict = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader}
     dataloader_dict.update({'test': test_dataloader})
     record_best_preds(net, dataloader_dict, mypath, args)
-    log_dict = compute_metrics(mypath, args)
+    log_dict = compute_metrics(mypath, args, log_dict)
     print('Finish all things!')
+    return log_dict
 
 
 if __name__ == "__main__":
     # set some global variables here, like log_dict, device, amp
     LogType = Optional[Union[int, float, str]]  # int includes bool
-    log_dict: Dict[str, LogType] = {}  # a global dict to store immutable variables saved to log files
+    LogDict = Dict[str, LogType]
+    log_dict: LogDict = {}  # a global dict to store immutable variables saved to log files
 
-    record_file: str = 'records_pos.csv'
+    record_file: str = PathInit().record_file
     id: int = record_1st(record_file, mode=args.mode) # write super parameters from set_args.py to record file.
     log_dict = train(id, log_dict)
     record_2nd(record_file, current_id=id, log_dict=log_dict)  # write other parameters and metrics to record file.

@@ -7,7 +7,7 @@ from monai.networks import eval_mode
 from tests.utils import test_script_save
 import unittest
 from parameterized import parameterized
-from ssc_scoring.networks.cnn_fc3d import Cnn3fc1, Cnn3fc2, Cnn4fc2, Cnn5fc2, Cnn6fc2, Vgg11_3d
+from ssc_scoring.mymodules.networks.cnn_fc3d import Cnn3fc1, Cnn3fc2, Cnn4fc2, Cnn5fc2, Cnn6fc2, Vgg11_3d
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
