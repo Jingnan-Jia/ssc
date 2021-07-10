@@ -259,24 +259,24 @@ class CropCorseRegiond:
         return d
 
 
-class ComposePosd:
-    """My Commpose to handle with img and label at the same time.
-
-    """
-
-    def __init__(self, transforms):
-        self.transforms = transforms
-
-    def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
-        for t in self.transforms:
-            data = t(data)
-        return data
-
-    def __repr__(self):
-        format_string = self.__class__.__name__ + '('
-        for t in self.transforms:
-            format_string += '\n'
-            format_string += '    {0}'.format(t)
-        format_string += '\n)'
-        return format_string
-
+# class ComposePosd:
+#     """My Commpose to handle with img and label at the same time.
+#
+#     """
+#
+#     def __init__(self, transforms):
+#         self.transforms = transforms
+#
+#     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
+#         for t in self.transforms:
+#             data = t(data)
+#         return data
+#
+#     def __repr__(self):
+#         format_string = self.__class__.__name__ + '('
+#         for t in self.transforms:
+#             format_string += '\n'
+#             format_string += '    {0}'.format(t)
+#         format_string += '\n)'
+#         return format_string
+#

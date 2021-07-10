@@ -49,7 +49,7 @@ def get_xformd(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256
             xforms.extend([CenterCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
 
     xforms.extend([MyNormalizeImagePosd(), AddChannelPosd()])
-    transform = ComposePosd(xforms)
+    transform = monai.transforms.Compose(xforms)
 
     return transform
 
