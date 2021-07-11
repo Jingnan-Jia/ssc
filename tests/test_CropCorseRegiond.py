@@ -41,7 +41,7 @@ TEST_CASE_3D_5Label_1 = [
      "data_fpath": data_fpath,
      "pred_world_fpath": pred_world_fpath},
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -52,7 +52,7 @@ TEST_CASE_3D_5Label_1 = [
      'origin_key': np.array([-100, 200, 30]),  # origin,  a np.array with shape(-1, )
      'fpath_key': "/data/samples/Pat_045.mha"},  # full path, a string
 
-    {"image_key": np.ones((200, 256, 256)),
+    {"image_key": np.ones((200, 20, 20)),
      "label_in_img_key": np.array([501]),
      "label_in_patch_key": np.array([101]),
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -77,7 +77,7 @@ TEST_CASE_3D_5Label_2 = [
      "pred_world_fpath": pred_world_fpath
      },
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -88,7 +88,7 @@ TEST_CASE_3D_5Label_2 = [
 
      },  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([601]),
      "label_in_patch_key": np.array([201]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -109,7 +109,7 @@ TEST_CASE_3D_5Label_3 = [  # "rand_start": True, test shape
      "pred_world_fpath": pred_world_fpath
      },
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -119,7 +119,7 @@ TEST_CASE_3D_5Label_3 = [  # "rand_start": True, test shape
 'fpath_key': "/data/samples/Pat_045.mha"
      },  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([601]),
      "label_in_patch_key": np.array([101]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -140,7 +140,7 @@ TEST_CASE_3D_5Label_4 = [  # "rand_start": True, test shape
      "pred_world_fpath": pred_world_fpath
      },
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -150,7 +150,7 @@ TEST_CASE_3D_5Label_4 = [  # "rand_start": True, test shape
 'fpath_key': "/data/samples/Pat_045.mha",
      },  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([601]),
      "label_in_patch_key": np.array([101]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -171,7 +171,7 @@ TEST_CASE_3D_5Label_5 = [  # doesnot 'level_key' (Error)
      "pred_world_fpath": pred_world_fpath
      },
 
-    {"image_key": np.ones((1000, 256, 256)),
+    {"image_key": np.ones((1000, 20, 20)),
      "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": None,
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
@@ -181,7 +181,7 @@ TEST_CASE_3D_5Label_5 = [  # doesnot 'level_key' (Error)
 'fpath_key': "/data/samples/Pat_045.mha",
      },  # full path, a string
 
-    {"image_key": np.ones((400, 256, 256)),
+    {"image_key": np.ones((400, 20, 20)),
      "label_in_img_key": np.array([601]),
      "label_in_patch_key": np.array([101]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
