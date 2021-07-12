@@ -67,17 +67,18 @@ def recon_transformd(mode='train'):
 
 def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256, x_size=256):
     xforms = [LoadDatad()]
-    if level_node or train_on_level:
-        xforms.append(CropLevelRegiond(level_node, train_on_level, height=z_size, rand_start=True))
-    else:
-        if mode == 'train':
-            # xforms.extend([RandomCropPosd(), RandGaussianNoised()])
-            xforms.extend([RandomCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
-
+    if mode is not None:
+        if level_node or train_on_level:
+            xforms.append(CropLevelRegiond(level_node, train_on_level, height=z_size, rand_start=True))
         else:
-            xforms.extend([CenterCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
+            if mode == 'train':
+                # xforms.extend([RandomCropPosd(), RandGaussianNoised()])
+                xforms.extend([RandomCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
 
-    xforms.extend([NormImgPosd(), AddChanneld()])
+            else:
+                xforms.extend([CenterCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
+
+        xforms.extend([NormImgPosd(), AddChanneld()])
     transform = monai.transforms.Compose(xforms)
 
     return transform

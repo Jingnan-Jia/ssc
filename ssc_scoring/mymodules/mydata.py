@@ -145,7 +145,7 @@ class LoadPos(LoaderInit):
                    z_size=self.z_size, y_size = self.y_size, x_size=self.x_size)
 
 
-    def load(self):
+    def load(self, noxform=False):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
         # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:6], tr_y[:6], vd_x[:6], vd_y[:6], ts_x[:6], ts_y[:6]
         # print(tr_x)
@@ -154,13 +154,16 @@ class LoadPos(LoaderInit):
         tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
         vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]
         ts_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(ts_x, ts_y)]
-
-        tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=self.xformd('train'), replace_rate=0.2,
+        if noxform:
+            tr_xf, vdaug_xf, vd_xf, ts_xf = None, None, None, None
+        else:
+            tr_xf, vdaug_xf, vd_xf, ts_xf = 'train', 'train', 'valid', 'test'
+        tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=self.xformd(tr_xf), replace_rate=0.2,
                                                   cache_num=cache_nb, num_init_workers=4, num_replace_workers=8)
-        vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('train'), num_workers=4,
+        vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd(vdaug_xf), num_workers=4,
                                                 cache_rate=1)
-        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid'), num_workers=4, cache_rate=1)
-        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=self.xformd('test'),
+        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd(vd_xf), num_workers=4, cache_rate=1)
+        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=self.xformd(ts_xf),
                                                   cache_dir="persistent_cache")
 
         train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.workers,
@@ -201,6 +204,7 @@ class LoadScore(LoaderInit):
             x.extend(x_level)
             y.extend(y_level)
         return x, y
+
     def load_data_of_a_level(self, dir_pat, level):
         df_excel = self.df_excel
         file_prefix = "Level" + str(level)
@@ -235,7 +239,7 @@ class LoadScore(LoaderInit):
 
     def load(self):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
-        tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
+        # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
         tr_dataset = SysDataset(tr_x, tr_y, transform=self.xformd("train", synthesis=self.sys, args=self.args), synthesis=self.sys)
         vd_data_aug = SysDataset(vd_x, vd_y, transform=self.xformd("validaug", synthesis=self.sys, args=self.args),
                                  synthesis=self.sys)
@@ -260,6 +264,5 @@ class LoadScore(LoaderInit):
         test_dataloader = DataLoader(ts_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
                                      pin_memory=True)
         return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
-
 
 
