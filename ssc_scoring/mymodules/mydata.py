@@ -68,12 +68,14 @@ class LoaderInit:
         return x, y
 
     def split_dir_pats(self):
-
-        dir_pats = sorted(glob.glob(os.path.join(self.mypath.ori_data_dir, "Pat_*")))
-        if len(dir_pats) == 0:  # does not find patients in this directory
-            dir_pats = sorted(glob.glob(os.path.join(self.mypath.data_dir, "Pat_*CTimage_low.mha")))
-            if len(dir_pats) == 0:
-                dir_pats = sorted(glob.glob(os.path.join(self.mypath.data_dir, "Pat_*", "CTimage.mha")))
+        if self.mypath.project_name == 'score':
+            dir_pats = sorted(glob.glob(os.path.join(self.mypath.ori_data_dir, "Pat_*")))
+        else:
+            dir_pats = sorted(glob.glob(os.path.join(self.mypath.dataset_dir(self.resample_z), "Pat_*", "CTimage.mha")))
+            if len(dir_pats) == 0:  # does not find patients in this directory
+                dir_pats = sorted(glob.glob(os.path.join(self.mypath.dataset_dir(self.resample_z), "Pat_*CTimage*.mha")))
+            # if len(dir_pats) == 0:
+            #     dir_pats = sorted(glob.glob(os.path.join(self.mypath.dataset_dir, "Pat_*", "CTimage.mha")))
 
         label_excel = pd.read_excel(self.label_file, engine='openpyxl')
 
@@ -135,6 +137,8 @@ class LoadPos(LoaderInit):
             y = self.df_excel.at[idx, 'L' + str(level) + '_pos']
             data_label.append(y)
         return data_name, np.array(data_label)
+
+
     def xformd(self, mode):
         return xformd_pos(mode, level_node=self.level_node,
                    train_on_level=self.train_on_level,
@@ -143,7 +147,8 @@ class LoadPos(LoaderInit):
 
     def load(self):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
-        # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:6], tr_y[:6], vd_x[:6], vd_y[:6], ts_x[:6], ts_y[:6]
+        tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:6], tr_y[:6], vd_x[:6], vd_y[:6], ts_x[:6], ts_y[:6]
+        print(tr_x)
         cache_nb = 10 if len(tr_x) < 50 else 50
 
         tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
