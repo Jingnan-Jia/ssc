@@ -9,9 +9,11 @@ import myutil.myutil as futil
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from typing import (List, Tuple, Optional, Union, Dict, Sequence)
 
 from ssc_scoring.mymodules.mytrans import LoadDatad, NormImgPosd, CropLevelRegiond, CropCorseRegiond
 from ssc_scoring.mymodules.path import PathPos as Path
+from ssc_scoring.mymodules.path import PathInit
 
 
 def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid', args=None):
@@ -87,7 +89,40 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid'
             i = 0
 
 
-class Evaluater():
+def record_preds(mode, batch_y, pred, mypath):
+    batch_label = batch_y.cpu().detach().numpy().astype('Int64')
+    batch_preds = pred.cpu().detach().numpy()
+    batch_preds_int = batch_preds.astype('Int64')
+    batch_preds_end5 = round_to_5(batch_preds_int)
+    batch_preds_end5 = batch_preds_end5.astype('Int64')
+
+    head = ['disext', 'gg', 'retp']
+    futil.appendrows_to(mypath.label(mode), batch_label, head=head)
+    futil.appendrows_to(mypath.pred(mode), batch_preds, head=head)
+    futil.appendrows_to(mypath.pred_int(mode), batch_preds_int, head=head)
+    futil.appendrows_to(mypath.pred_end5(mode), batch_preds_end5, head=head)
+
+
+def round_to_5(pred: Union[torch.Tensor, np.ndarray], device=torch.device("cpu")) -> Union[torch.Tensor, np.ndarray]:
+    if type(pred) == torch.Tensor:
+        tensor_flag = True
+        pred = pred.cpu().detach().numpy()
+    else:
+        tensor_flag = False
+
+    # elif type(pred) == np.ndarray:
+    pred = np.rint(pred / 5) * 5
+    pred[pred > 100] = 100
+    pred[pred < 0] = 0
+
+    if tensor_flag:
+        pred = torch.tensor(pred)
+        pred = pred.to(device)
+
+    return pred
+
+
+class Evaluater_pos():
     def __init__(self, net, dataloader, mode, mypath, args):
         self.net = net
         self.dataloader = dataloader
@@ -106,7 +141,7 @@ class Evaluater():
                 sliding_loader = SlidingLoader(batch_data['fpath_key'][idx], batch_data['ori_world_key'][idx],
                                                z_size=self.args.z_size, stride=self.args.infer_stride,
                                                batch_size=self.args.batch_size,
-                                               mode=self.args.mode, args=self.args)
+                                               mode=self.mode, args=self.args)
                 pred_in_img_ls = []
                 pred_in_patch_ls = []
                 label_in_patch_ls = []
@@ -177,8 +212,46 @@ class Evaluater():
                 futil.appendrows_to(self.mypath.world(self.mode), batch_world, head=head)  # 33 label in world
 
 
-def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoader], mypath: Path, args):
+class Evaluater_score():
+    def __init__(self, net, dataloader, mode, mypath, args):
+        self.net = net
+        self.dataloader = dataloader
+        self.mode = mode
+        self.mypath = mypath
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.net = self.net.to(self.device).eval()
+        self.amp = True if torch.cuda.is_available() else False
+        self.args = args
+
+    def run(self):
+        for data in self.dataloader:
+            if 'label_key' not in data:
+                batch_x, batch_y = data['image_key'], data['image_key']
+            else:
+                batch_x, batch_y = data['image_key'], data['label_key']
+
+            print('batch_y is: ')
+            print(batch_y)
+
+            batch_x = batch_x.to(self.device)
+            batch_y = batch_y.to(self.device)
+
+            if self.amp:
+                with torch.cuda.amp.autocast():
+                    with torch.no_grad():
+                        pred = self.net(batch_x)
+            else:
+                with torch.no_grad():
+                    pred = self.net(batch_x)
+
+            record_preds(self.mode, batch_y, pred, self.mypath)
+
+
+def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoader], mypath: PathInit, args):
     net.load_state_dict(torch.load(mypath.model_fpath))  # load the best weights to do evaluation
     for mode, dataloader in dataloader_dict.items():
-        evaluater = Evaluater(net, dataloader, mode, mypath, args)
+        if mypath.project_name=='score':
+            evaluater = Evaluater_score(net, dataloader, mode, mypath, args)
+        else:
+            evaluater = Evaluater_pos(net, dataloader, mode, mypath, args)
         evaluater.run()
