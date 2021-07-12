@@ -61,13 +61,12 @@ class AddChanneld:
 class NormImgPosd:
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         d = dict(data)
-        # print(d)
-        # print('start norm')
-        # print('img_shape', d['image_key'].shape)
-        # print(d['image_key'])
-        # print('mean:', torch.mean(d['image_key']))
 
-        mean, std = torch.mean(d['image_key']), torch.std(d['image_key'])
+        if isinstance(d['image_key'], torch.Tensor):
+            mean, std = torch.mean(d['image_key']), torch.std(d['image_key'])
+        else:
+            mean, std = np.mean(d['image_key']), torch.std(d['image_key'])
+
         d['image_key'] = d['image_key'] - mean
         d['image_key'] = d['image_key'] / std
         # print('end norm')
