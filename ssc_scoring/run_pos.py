@@ -15,11 +15,11 @@ import torch
 import torch.nn as nn
 
 from mymodules.inference import record_best_preds
-from mymodules.mydata import AllLoader
+from mymodules.mydata import LoadPos
 from mymodules.myloss import get_loss
 from mymodules.networks import get_net_pos
 from mymodules.networks import med3d_resnet as med3d
-from mymodules.path import PathPos, PathInit
+from mymodules.path import PathPos, PathPosInit
 
 from mymodules.set_args_pos import args
 from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae, compute_metrics
@@ -34,8 +34,11 @@ def GPU_info(outfile):  # need to be in the main file because it will be execute
 
 def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_idx,
               valid_mae_best=None):
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-    scaler = torch.cuda.amp.GradScaler()
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        scaler = torch.cuda.amp.GradScaler()
+    else:
+        device = torch.device("cpu")
     print(mode + "ing ......")
     loss_path = mypath.loss(mode)
     if mode == 'train' or mode == 'validaug':
@@ -118,7 +121,7 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
         batch_idx += 1
 
         if 'gpuname' not in log_dict:
-            p1 = threading.Thread(target=GPU_info)
+            p1 = threading.Thread(target=GPU_info, args=(args.outfile, ))
             p1.start()
 
         t0 = t3  # reset the t0
@@ -157,16 +160,14 @@ def start_run(mode, net, kd_net, dataloader, loss_fun, loss_fun_mae, opt, mypath
         return None
 
 
-
-
-def get_kd_net(net_name: str) -> nn.Module:
+def get_kd_net(net_name: str, nb_cls: int) -> nn.Module:
     if net_name == "med3d_resnet50":
         net = med3d.resnet50(sample_input_W=args.z_size,
-                sample_input_H=args.y_size,
-                sample_input_D=args.x_size,
-                shortcut_type='A',
-                no_cuda=False,
-                num_seg_classes=5)
+                             sample_input_H=args.y_size,
+                             sample_input_D=args.x_size,
+                             shortcut_type='A',
+                             no_cuda=False,
+                             num_seg_classes=nb_cls)
     elif net_name == "model_genesis":
         net = None
     else:
@@ -181,15 +182,19 @@ def train(id: int, log_dict: dict):
         outs = 1
     else:
         outs = 5
-    net: torch.nn.Module = get_net_pos(name=args.net, nb_cls = outs, level_node = args.level_node)
+    net: torch.nn.Module = get_net_pos(name=args.net, nb_cls=outs, level_node=args.level_node)
     net_parameters = futil.count_parameters(net)
-    net_parameters = str(round(net_parameters / 1024 / 1024, 2)); log_dict['net_parameters'] = net_parameters
+    net_parameters = str(round(net_parameters / 1024 / 1024, 2))
+    log_dict['net_parameters'] = net_parameters
 
-    label_file = "dataset/SSc_DeepLearning/GohScores.xlsx";log_dict['label_file'] = label_file
-    seed = 49; log_dict['data_shuffle_seed'] = seed
+    label_file = "dataset/SSc_DeepLearning/GohScores.xlsx"
+    log_dict['label_file'] = label_file
+    seed = 49
+    log_dict['data_shuffle_seed'] = seed
 
-    all_loader = AllLoader(args.resample_z, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb, args.level_node,
-                 args.train_on_level, args.z_size, args.y_size, args.x_size, args.batch_size, args.workers)
+    all_loader = LoadPos(args.resample_z, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb,
+                           args.level_node,
+                           args.train_on_level, args.z_size, args.y_size, args.x_size, args.batch_size, args.workers)
     train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
     net = net.to(device)
     if args.eval_id:
@@ -200,11 +205,12 @@ def train(id: int, log_dict: dict):
 
     loss_fun = get_loss(args.loss)
     loss_fun_mae = nn.L1Loss()
-    lr = 1e-4; log_dict['lr'] = lr
+    lr = 1e-4;
+    log_dict['lr'] = lr
     opt = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=args.weight_decay)
     epochs = 0 if args.mode == 'infer' else args.epochs
     if args.kd_net is not None:
-        kd_net = get_kd_net(args.kd_net)
+        kd_net = get_kd_net(args.kd_net, nb_lcs=outs)
     else:
         kd_net = None
     for i in range(epochs):  # 20000 epochs
@@ -231,7 +237,7 @@ if __name__ == "__main__":
     LogDict = Dict[str, LogType]
     log_dict: LogDict = {}  # a global dict to store immutable variables saved to log files
 
-    record_file: str = PathInit().record_file
-    id: int = record_1st(record_file, args) # write super parameters from set_args.py to record file.
+    record_file: str = PathPosInit().record_file
+    id: int = record_1st(record_file, args)  # write super parameters from set_args.py to record file.
     log_dict = train(id, log_dict)
-    record_2nd(record_file, current_id=id, log_dict=log_dict)  # write other parameters and metrics to record file.
+    record_2nd(record_file, current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.
