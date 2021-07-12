@@ -203,6 +203,8 @@ class CropCorseRegiond:
     """
     Only keep the label of the current level: label_in_img.shape=(1,), label_in_patch.shape=(1,)
     and add a level_key to data dick.
+    d['corse_pred_in_img_key'].shape is (5,)
+    d['corse_pred_in_img_1_key'].shape is (1,)
     """
 
     def __init__(self,
@@ -268,9 +270,9 @@ class CropCorseRegiond:
                 self.level = random.randint(1, 5)  # 1,2,3,4,5 level is randomly selected
             else:
                 raise Exception("Do not need CropLevelRegiond because level_node==0 and train_on_level==0")
-
-        d['corse_pred_in_img_key'] = np.array(d['corse_pred_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
-        label: int = d['corse_pred_in_img_key']  # z slice number
+        # keep the current label for the current level
+        d['corse_pred_in_img_1_key'] = np.array(d['corse_pred_in_img_key'][self.level - 1]).reshape(-1, )
+        label: int = d['corse_pred_in_img_1_key']  # z slice number
         lower: int = max(0, label - self.height)
         if self.rand_start:
             start = random.randint(lower, label)  # between lower and label
@@ -287,7 +289,7 @@ class CropCorseRegiond:
             start = end - self.height
         d['image_key'] = d['image_key'][start: end].astype(np.float32)
 
-        d['label_in_patch_key'] = d['corse_pred_in_img_key'] - start  # todo: clear the concept here
+        d['label_in_patch_key'] = d['corse_pred_in_img_1_key'] - start  # todo: clear the concept here
 
         d['world_key'] = np.array(d['world_key'][self.level - 1]).reshape(-1, )
         d['level_key'] = np.array(self.level).reshape(-1, )

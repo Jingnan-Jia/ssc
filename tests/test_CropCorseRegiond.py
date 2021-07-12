@@ -66,6 +66,8 @@ TEST_CASE_3D_5Label_1 = [
      'level_key': np.array([1]),
 
      'corse_pred_in_img_key': np.array([501, 601, 701, 801, 901]),
+     'corse_pred_in_img_1_key': np.array([501]),
+
 
      }
 ]
@@ -89,7 +91,7 @@ TEST_CASE_3D_5Label_2 = [
      },  # full path, a string
 
     {"image_key": np.ones((400, 20, 20)),
-     "label_in_img_key": np.array([601]),
+     "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": np.array([201]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
      'ori_world_key': np.array([1000, 1200, 1400, 1600, 1800]),
@@ -98,6 +100,7 @@ TEST_CASE_3D_5Label_2 = [
      'level_key': np.array([2]),
 'fpath_key': "/data/samples/Pat_045.mha",
      'corse_pred_in_img_key': np.array([501, 601, 701, 801, 901]),
+     'corse_pred_in_img_1_key': np.array([601]),
 
      }  # full path, a string
 ]
@@ -120,7 +123,7 @@ TEST_CASE_3D_5Label_3 = [  # "rand_start": True, test shape
      },  # full path, a string
 
     {"image_key": np.ones((400, 20, 20)),
-     "label_in_img_key": np.array([601]),
+     "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": np.array([101]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
      'ori_world_key': np.array([1000, 1200, 1400, 1600, 1800]),
@@ -129,6 +132,7 @@ TEST_CASE_3D_5Label_3 = [  # "rand_start": True, test shape
      'level_key': np.array([2]),
 'fpath_key': "/data/samples/Pat_045.mha",
      'corse_pred_in_img_key': np.array([501, 601, 701, 801, 901]),
+     'corse_pred_in_img_1_key': np.array([601]),
 
      }  # full path, a string
 ]
@@ -151,7 +155,7 @@ TEST_CASE_3D_5Label_4 = [  # "rand_start": True, test shape
      },  # full path, a string
 
     {"image_key": np.ones((400, 20, 20)),
-     "label_in_img_key": np.array([601]),
+     "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": np.array([101]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
      'ori_world_key': np.array([1000, 1200, 1400, 1600, 1800]),
@@ -160,6 +164,7 @@ TEST_CASE_3D_5Label_4 = [  # "rand_start": True, test shape
      'level_key': np.array([2]),
 'fpath_key': "/data/samples/Pat_045.mha",
      'corse_pred_in_img_key': np.array([501, 601, 701, 801, 901]),
+     'corse_pred_in_img_1_key': np.array([601]),
 
      }  # full path, a string
 ]
@@ -182,7 +187,7 @@ TEST_CASE_3D_5Label_5 = [  # doesnot 'level_key' (Error)
      },  # full path, a string
 
     {"image_key": np.ones((400, 20, 20)),
-     "label_in_img_key": np.array([601]),
+     "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": np.array([101]),  # not sure
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
      'ori_world_key': np.array([1000, 1200, 1400, 1600, 1800]),
@@ -191,6 +196,7 @@ TEST_CASE_3D_5Label_5 = [  # doesnot 'level_key' (Error)
      'level_key': np.array([3]).reshape(-1, ),  # a random number
 'fpath_key': "/data/samples/Pat_045.mha",
      'corse_pred_in_img_key': np.array([501, 601, 701, 801, 901]),
+     'corse_pred_in_img_1_key': np.array([501]),
 
      }  # full path, a string
 ]
