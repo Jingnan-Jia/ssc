@@ -3,6 +3,10 @@
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
 # log_dict is used to record super parameters and metrics
+
+import sys
+sys.path.append("..")
+
 import csv
 import os
 import threading

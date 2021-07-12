@@ -32,7 +32,7 @@ parser.add_argument('--sys_pro_in_0', help='sys_pro_in_0', type=float, default=0
 parser.add_argument('--_ori_weight0', help='_ori_weight0, do not set this value', type=float, default=0.0)
 
 parser.add_argument('--valid_period', help='how many epochs between 2 validation', type=int, default=5)
-parser.add_argument('--workers',  help='number of workers for dataloader', type=int, default=10)
+parser.add_argument('--workers',  help='number of workers for dataloader', type=int, default=2)
 parser.add_argument('--ts_level_nb', choices=(235, 240), help='if customer sampler?', type=int, default=240)
 parser.add_argument('--masked_by_lung', choices=(1, 0), help='if slices are masked by lung masks', type=int, default=0)
 
