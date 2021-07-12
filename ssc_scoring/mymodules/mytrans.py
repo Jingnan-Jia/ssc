@@ -5,10 +5,13 @@
 import random
 from typing import Dict, Optional, Union, Hashable, Mapping
 import pandas as pd
-
+import torch
 import myutil.myutil as futil
 import numpy as np
 from monai.transforms import RandGaussianNoise
+from monai.transforms import ScaleIntensityRange, RandGaussianNoise, MapTransform, AddChannel
+from torchvision.transforms import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, RandomAffine
+import matplotlib.pyplot as plt
 
 TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
@@ -45,7 +48,7 @@ class LoadDatad:
         return data
 
 
-class AddChannelPosd:
+class AddChanneld:
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         """
         Apply the transform to `img`.
@@ -58,19 +61,27 @@ class AddChannelPosd:
 class NormImgPosd:
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         d = dict(data)
+        # print(d)
+        # print('start norm')
+        # print('img_shape', d['image_key'].shape)
+        # print(d['image_key'])
+        # print('mean:', torch.mean(d['image_key']))
 
-        mean, std = np.mean(d['image_key']), np.std(d['image_key'])
+        mean, std = torch.mean(d['image_key']), torch.std(d['image_key'])
         d['image_key'] = d['image_key'] - mean
         d['image_key'] = d['image_key'] / std
+        # print('end norm')
+
         return d
 
 
-class RandGaussianNoisePosd:
+class RandGaussianNoised:
     def __init__(self, *args, **kargs):
         self.noise = RandGaussianNoise(*args, **kargs)
 
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         d = dict(data)
+        print('start add noise')
         d['image_key'] = self.noise(d['image_key'])
         return d
 
@@ -259,8 +270,8 @@ class CropCorseRegiond:
             else:
                 raise Exception("Do not need CropLevelRegiond because level_node==0 and train_on_level==0")
 
-        d['label_in_img_key'] = np.array(d['corse_pred_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
-        label: int = d['label_in_img_key']  # z slice number
+        d['corse_pred_in_img_key'] = np.array(d['corse_pred_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
+        label: int = d['corse_pred_in_img_key']  # z slice number
         lower: int = max(0, label - self.height)
         if self.rand_start:
             start = random.randint(lower, label)  # between lower and label
@@ -277,7 +288,7 @@ class CropCorseRegiond:
             start = end - self.height
         d['image_key'] = d['image_key'][start: end].astype(np.float32)
 
-        d['label_in_patch_key'] = d['label_in_img_key'] - start
+        d['label_in_patch_key'] = d['corse_pred_in_img_key'] - start  # todo: clear the concept here
 
         d['world_key'] = np.array(d['world_key'][self.level - 1]).reshape(-1, )
         d['level_key'] = np.array(self.level).reshape(-1, )
@@ -378,3 +389,81 @@ class CropCorseRegiond:
 #         format_string += '\n)'
 #         return format_string
 #
+
+
+
+class RandomAffined(MapTransform):
+    def __init__(self, keys, *args, **kwargs):
+        super().__init__(keys)
+        self.random_affine = RandomAffine(*args, **kwargs)
+
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            d[key] = self.random_affine(d[key])
+        return d
+
+
+class CenterCropd(MapTransform):
+    def __init__(self, keys, *args, **kargs):
+        super().__init__(keys)
+        self.center_crop = CenterCrop(*args, **kargs)
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            d[key] = self.center_crop(d[key])
+        return d
+
+
+class RandomHorizontalFlipd(MapTransform):
+    def __init__(self, keys, *args, **kargs):
+        super().__init__(keys)
+        self.random_hflip = RandomHorizontalFlip(*args, **kargs)
+
+
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            d[key] = self.random_hflip(d[key])
+        return d
+
+
+class RandomVerticalFlipd(MapTransform):
+    def __init__(self, keys, *args, **kargs):
+        super().__init__(keys)
+        self.random_vflip = RandomVerticalFlip(*args, **kargs)
+
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            d[key] = self.random_vflip(d[key])
+        return d
+
+
+
+class Clip:
+    def __init__(self, min, max):
+        self.min = min
+        self.max = max
+
+    def __call__(self, img):
+        """
+        Apply the transform to `img`.
+        """
+
+        img[img < self.min] = self.min
+        img[img > self.max] = self.max
+        return img
+
+
+class Clipd(MapTransform):
+    def __init__(self, keys, min, max):
+        super().__init__(keys)
+        self.clip = Clip(min, max)
+
+    def __call__(self, data):
+        d = dict(data)
+        for key in self.keys:
+            d[key] = self.clip(d[key])
+        return d
+
