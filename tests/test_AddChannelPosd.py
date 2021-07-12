@@ -8,7 +8,7 @@ import tempfile
 import os
 
 from parameterized import parameterized
-from ssc_scoring.mymodules.mytrans import AddChannelPosd
+from ssc_scoring.mymodules.mytrans import AddChanneld
 import numpy as np
 import myutil.myutil as futil
 from tests.utils import Compare
@@ -25,7 +25,7 @@ class TestAddChannelPosd(unittest.TestCase):
     @parameterized.expand([TEST_CASE_1])
     def test_AddChannelPosd(self, input_data, expected_out):
         with tempfile.TemporaryDirectory() as tempdir:
-            result = AddChannelPosd()(input_data)
+            result = AddChanneld()(input_data)
             Compare().go(result, expected_out)
 
 
