@@ -65,7 +65,7 @@ class NormImgPosd:
         if isinstance(d['image_key'], torch.Tensor):
             mean, std = torch.mean(d['image_key']), torch.std(d['image_key'])
         else:
-            mean, std = np.mean(d['image_key']), torch.std(d['image_key'])
+            mean, std = np.mean(d['image_key']), np.std(d['image_key'])
 
         d['image_key'] = d['image_key'] - mean
         d['image_key'] = d['image_key'] / std
