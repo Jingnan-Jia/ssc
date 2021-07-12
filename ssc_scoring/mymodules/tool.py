@@ -2,11 +2,12 @@
 # @Time    : 7/5/21 5:23 PM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
-
+import torch
 import datetime
 import os
 import shutil
 import time
+from ssc_scoring.mymodules.path import PathInit
 
 import myutil.myutil as futil
 import numpy as np
@@ -17,12 +18,53 @@ from filelock import FileLock
 from ssc_scoring.mymodules.confusion_test import confusion
 from ssc_scoring.mymodules.path import PathPos as Path
 # from mymodules.set_args_pos import args
+from torch.utils.data import WeightedRandomSampler
+
+def sampler_by_disext(tr_y, sys_ratio=0.8):
+    disext_list = []
+    for sample in tr_y:
+        if type(sample) in [list, np.ndarray]:
+            disext_list.append(sample[0])
+        else:
+            disext_list.append(sample)
+    disext_np = np.array(disext_list)
+    disext_unique = np.unique(disext_np)
+    disext_unique_list = list(disext_unique)
+
+    class_sample_count = np.array([len(np.where(disext_np == t)[0]) for t in disext_unique])
+    if sys_ratio:
+        weight = 1 / class_sample_count
+        print("class_sample_count", class_sample_count)
+        print("unique_disext",disext_unique_list )
+        print("original weight",weight )
+
+        idx_0 = disext_unique_list.index(0)
+        weight[idx_0] += 20 * weight[idx_0]
+        # samples_weight = np.array([weight[disext_unique_list.index(t)] for t in disext_np])
+
+        # weight_0 = sys_ratio + (1-sys_ratio)/21  # weight for category of 0, which is for original 0 and sys 0
+        # weight_others = 1 - weight_0  # weight for other categories
+        # # weight = [weight_0, *weight_others]
+        # samples_weight = np.array([weight_0 if t==0 else weight_others for t in disext_np])
+        print("weight: ", weight)
+        # print(samples_weight)
+    else:
+        weight = 1. / class_sample_count
+
+    samples_weight = np.array([weight[disext_unique_list.index(t)] for t in disext_np])
+
+    # weight = [nb_nonzero/len(data_y_list) if e[0] == 0 else nb_zero/len(data_y_list) for e in data_y_list]
+    samples_weight = samples_weight.astype(np.float32)
+    samples_weight = torch.from_numpy(samples_weight)
+    sampler = WeightedRandomSampler(samples_weight, len(samples_weight))
+    print(list(sampler))
+    return sampler
 
 
-def compute_metrics(mypath: Path, eval_id=None, log_dict=None):
+def compute_metrics(mypath: PathInit, eval_id=None, log_dict=None):
     for mode in ['train', 'valid', 'test', 'validaug']:
         try:
-            if eval_id is not None:
+            if (not os.path.isfile(mypath.world(mode))) and (eval_id is not None):
                 mypath2 = Path(eval_id)
                 shutil.copytree(mypath2.id_dir, mypath.id_dir)
 
@@ -57,8 +99,11 @@ def eval_net_mae(eval_id: int, mypath: Path):
 
 def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int, args) -> pd.DataFrame:
     modes = ['train', 'validaug', 'valid', 'test']
-    metrics_min = 'mae'
-    df.at[index, 'metrics_min'] = 'mae'
+    if mypath.project_name == 'score':
+        metrics_min = 'mae_end5'
+    else:
+        metrics_min = 'mae'
+    df.at[index, 'metrics_min'] = metrics_min
 
     for mode in modes:
         lock2 = FileLock(mypath.loss(mode) + ".lock")
@@ -76,7 +121,10 @@ def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int, args) -> pd.Dat
 
             best_index = loss_df[metrics_min].idxmin()
             loss = loss_df['loss'][best_index]
-            mae = loss_df[metrics_min][best_index]
+            mae = loss_df['mae'][best_index]
+            if mypath.project_name == 'score':
+                mae_end5 = loss_df['mae_end5'][best_index]
+                df.at[index, mode + '_mae_end5'] = round(loss, 2)
         df.at[index, mode + '_loss'] = round(loss, 2)
         df.at[index, mode + '_mae'] = round(mae, 2)
     return df
@@ -84,9 +132,9 @@ def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int, args) -> pd.Dat
 
 def write_and_backup(df: pd.DataFrame, record_file: str, mypath: Path):
     df.to_csv(record_file, index=False)
-    shutil.copy(record_file, os.path.join(mypath.results_dir, 'cp_' + record_file))
+    shutil.copy(record_file, os.path.join(mypath.results_dir, 'cp_' + os.path.basename(record_file)))
     df_lastrow = df.iloc[[-1]]
-    df_lastrow.to_csv(os.path.join(mypath.id_dir, record_file), index=False)  # save the record of the current ex
+    df_lastrow.to_csv(os.path.join(mypath.id_dir, os.path.basename(record_file)), index=False)  # save the record of the current ex
 
 
 def fill_running(df: pd.DataFrame):
@@ -267,5 +315,5 @@ def record_GPU_info(outfile):
         return gpuname, gpu_mem_usage, str(gpu_util) + '%'
     else:
         print('outfile is None, can not show GPU memory info')
-    return None
+        return None, None, None
 
