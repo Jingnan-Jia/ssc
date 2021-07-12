@@ -468,3 +468,15 @@ class Clipd(MapTransform):
             d[key] = self.clip(d[key])
         return d
 
+class CascadedSlices(MapTransform):
+    """
+    0. get 2D images with their "real labels" from excel
+    1. get the 3D images and their 5 world positions using the Pos dataset loader
+    2. Get the position predictions of each 3D images, replace the former 5 world positions, using
+    corse_pred() in CropCorsePosd
+    3. Get 5 slices by 1 and 2
+    4. output 5 slices from 3 and their "real labels" from 1
+    """
+    def __call__(self, *args, **kwargs):
+        return None
+
