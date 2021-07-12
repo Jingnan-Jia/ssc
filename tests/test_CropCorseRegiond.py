@@ -53,7 +53,7 @@ TEST_CASE_3D_5Label_1 = [
      'fpath_key': "/data/samples/Pat_045.mha"},  # full path, a string
 
     {"image_key": np.ones((200, 20, 20)),
-     "label_in_img_key": np.array([501]),
+     "label_in_img_key": np.array([500, 600, 700, 800, 900]),
      "label_in_patch_key": np.array([101]),
      "ori_label_in_img_key": np.array([500, 600, 700, 800, 900]),
      'ori_world_key': np.array([1000, 1200, 1400, 1600, 1800]),
