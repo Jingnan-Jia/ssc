@@ -9,6 +9,19 @@ from typing import Union
 class PathInit:
     def __init__(self):
         self.results_dir: str = 'results'
+
+
+class PathScoreInit(PathInit):
+    def __init__(self):
+        super().__init__()
+        self.project_name = 'score'
+        self.record_file: str = os.path.join(self.results_dir, 'records_700.csv')
+
+
+class PathPosInit(PathInit):
+    def __init__(self):
+        super().__init__()
+        self.project_name = 'position'
         self.record_file: str = os.path.join(self.results_dir, 'records_pos.csv')
 
 
@@ -18,10 +31,12 @@ class Path(PathInit):
 
         self.slurmlog_dir = os.path.join(self.results_dir, 'slurmlogs')
         self.data_dir = 'dataset'
+        self.ori_data_dir = os.path.join(self.data_dir, 'SSc_DeepLearning')
+
         self.label_excel_fpath = os.path.join(self.data_dir, "GohScores.xlsx")
 
         if isinstance(id, (int, float)):
-            self.id = str(int(self.id))
+            self.id = str(int(id))
         else:
             self.id = id
         self.model_dir = os.path.join(self.results_dir, model_dir)
@@ -51,9 +66,10 @@ class Path(PathInit):
         raise NotImplementedError
 
 
-class PathPos(Path):
+class PathPos(Path, PathPosInit):
     def __init__(self, id=None, check_id_dir=False) -> None:
-        super().__init__(id, 'models_pos', check_id_dir)
+        Path.__init__(self, id, 'models_pos', check_id_dir)
+        PathPosInit.__init__(self)
 
     def label(self, mode: str):
         return os.path.join(self.id_dir, mode + '_label.csv')
@@ -95,9 +111,10 @@ class PathPos(Path):
         return os.path.join(self.results_dir, 'persistent_cache')
 
 
-class PathScore(Path):
+class PathScore(Path, PathScoreInit):
     def __init__(self, id=None, check_id_dir=False) -> None:
-        super().__init__(id, 'models', check_id_dir)
+        Path.__init__(self, id, 'models', check_id_dir)
+        PathScoreInit.__init__(self)
 
     def label(self, mode: str):
         return os.path.join(self.id_dir, mode + '_label.csv')
