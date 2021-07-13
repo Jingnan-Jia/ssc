@@ -57,6 +57,18 @@ def xformd_score(mode='train', synthesis=False, args=None):
     return transform
 
 
+
+def xformd_pos2score(mode, mypath):
+    xforms = [LoadDatad(),
+              CoresPos(corse_fpath=mypath.pred_int(mode), data_fpath=mypath.data(mode)),
+              SliceFromCorsePos(),
+              AddChanneld()]
+
+    transform = monai.transforms.Compose(xforms)
+
+    return transform
+
+
 def recon_transformd(mode='train'):
     keys = "image_key"  # only transform image
     xforms = [AddChanneld()]
@@ -67,26 +79,22 @@ def recon_transformd(mode='train'):
     return xforms
 
 
-def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256, x_size=256, mypath=None):
+def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256, x_size=256):
     xforms = [LoadDatad()]
-    if mypath is not None:
-        xforms.append(CoresPos(corse_fpath=mypath.pred_int(mode), data_fpath=mypath.data(mode)))
-        xforms.append(SliceFromCorsePos())
+    if level_node or train_on_level:
+        xforms.append(CropLevelRegiond(level_node, train_on_level, height=z_size, rand_start=True))
     else:
-        if level_node or train_on_level:
-            xforms.append(CropLevelRegiond(level_node, train_on_level, height=z_size, rand_start=True))
-        else:
-            if mode == 'train':
-                # xforms.extend([RandomCropPosd(), RandGaussianNoised()])
-                xforms.extend([RandomCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
+        if mode == 'train':
+            # xforms.extend([RandomCropPosd(), RandGaussianNoised()])
+            xforms.extend([RandomCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
 
-            else:
-                xforms.extend([CenterCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
-            xforms.append(NormImgPosd())
+        else:
+            xforms.extend([CenterCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
+        xforms.append(NormImgPosd())
 
     xforms.extend([AddChanneld()])
     # xforms.extend([CastToTyped(keys = ('image_key'), dtype=('np.float32'))])
     transform = monai.transforms.Compose(xforms)
-
-
     return transform
+
+

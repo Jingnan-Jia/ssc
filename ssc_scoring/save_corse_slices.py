@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 
 from mymodules.inference import record_best_preds
-from mymodules.mydata import LoadPos
+from mymodules.mydata import LoadPos2Score
 from mymodules.myloss import get_loss
 from mymodules.networks import get_net_pos
 from mymodules.networks import med3d_resnet as med3d
@@ -39,9 +39,9 @@ def train():
 
     label_file = "dataset/SSc_DeepLearning/GohScores.xlsx"
     seed = 49
-    all_loader = LoadPos(0, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb, args.level_node,
+    all_loader = LoadPos2Score(0, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb, args.level_node,
                            args.train_on_level, args.z_size, args.y_size, args.x_size, 1, 1)
-    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load(noxform=True)
+    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
 
     dataloader_dict = {'valid': valid_dataloader}
     # , 'valid': valid_dataloader, 'validaug': validaug_dataloader}
