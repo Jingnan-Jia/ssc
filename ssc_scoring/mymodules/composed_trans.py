@@ -95,6 +95,7 @@ def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256
     xforms.extend([AddChanneld()])
     # xforms.extend([CastToTyped(keys = ('image_key'), dtype=('np.float32'))])
     transform = monai.transforms.Compose(xforms)
+
     return transform
 
 

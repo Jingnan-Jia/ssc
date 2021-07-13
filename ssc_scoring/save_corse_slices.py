@@ -54,11 +54,8 @@ def train():
                 if not os.path.isdir(os.path.dirname(full_pth)):
                     os.makedirs(os.path.dirname(full_pth))
                 print(full_pth)
-                print(batch_data['origin_key'][0][1:])
-                print(batch_data['space_key'][0][1:])
                 origin_ls = [float(i) for i in batch_data['origin_key'][0]][1:]
                 space_ls = [float(i) for i in batch_data['space_key'][0]][1:]
-                print('type_1', type(space_ls[0]))
                 futil.save_itk(full_pth, slice, origin_ls, space_ls)  # slice does not have origin and space along z
 
     print('Finish all things!')

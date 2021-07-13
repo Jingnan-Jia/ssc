@@ -69,7 +69,11 @@ class LoaderInit:
 
     def split_dir_pats(self):
         if self.mypath.project_name == 'score':
-            dir_pats = sorted(glob.glob(os.path.join(self.mypath.ori_data_dir, "Pat_*")))
+            if hasattr(self.mypath, 'corse_pred_dir'):
+                data_dir = self.mypath.corse_pred_dir
+            else:
+                data_dir = self.mypath.ori_data_dir
+            dir_pats = sorted(glob.glob(os.path.join(data_dir, "Pat_*")))
         else:
             dir_pats = sorted(glob.glob(os.path.join(self.mypath.dataset_dir(self.resample_z), "Pat_*", "CTimage.mha")))
             if len(dir_pats) == 0:  # does not find patients in this directory
@@ -234,10 +238,10 @@ class LoadScore(LoaderInit):
         return xformd_score(*arg, **karg)
 
 
-    def load(self):
+    def load(self, merge=0):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
-        tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
-        print(tr_x)
+        # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
+        # print(tr_x)
         tr_dataset = SysDataset(tr_x, tr_y, transform=self.xformd("train", synthesis=self.sys, args=self.args), synthesis=self.sys)
         vd_data_aug = SysDataset(vd_x, vd_y, transform=self.xformd("validaug", synthesis=self.sys, args=self.args),
                                  synthesis=self.sys)
@@ -246,6 +250,14 @@ class LoadScore(LoaderInit):
                                 synthesis=False)  # valid original data
         sampler = sampler_by_disext(tr_y, self.sys_ratio) if self.sampler else None
         print(f'sampler is {sampler}')
+        if merge != 0:
+            all_x = [*tr_x, *vd_x, *ts_x]
+            all_y = [*tr_y, *vd_y, *ts_y]
+            all_dataset = SysDataset(all_x, all_y, transform=self.xformd("valid", synthesis=self.sys, args=self.args),
+                                 synthesis=False)
+            all_loader = DataLoader(all_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
+                                         pin_memory=True)
+            return all_loader
 
         # else:
         #     raise Exception("synthesis_data can not be set with sampler !")
@@ -286,12 +298,12 @@ class LoadPos2Score(LoaderInit):
         tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
         vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]
         ts_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(ts_x, ts_y)]
-        tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=self.xformd('train'), replace_rate=0.2,
-                                                  cache_num=cache_nb, num_init_workers=4, num_replace_workers=8)
+        tr_dataset = monai.data.CacheDataset(data=tr_data, transform=self.xformd('train'),  num_workers=4,
+                                                cache_rate=0.1)
         vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('train'), num_workers=4,
-                                                cache_rate=1)
+                                                cache_rate=0.1)
         vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid'), num_workers=4,
-                                             cache_rate=1)
+                                             cache_rate=0.1)
         ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=self.xformd('valid'),
                                                   cache_dir="persistent_cache")
         train_dataloader = iter(tr_dataset)
@@ -300,4 +312,5 @@ class LoadPos2Score(LoaderInit):
         test_dataloader = iter(ts_dataset)
 
         return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
+
 

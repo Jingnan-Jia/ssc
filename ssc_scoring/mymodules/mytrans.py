@@ -490,18 +490,21 @@ class CoresPos:
     def __call__(self, data):
         print('start corse pos extration ...')
         df_corse_pos = pd.read_csv(self.corse_fpath, delimiter=',')
-        df_data = pd.read_csv(self.data_fpath, delimiter=',')
+        df_data = pd.read_csv(self.data_fpath, delimiter=',', header=None)  # no header for dat.csv
         pat_idx = None
         # print("df_data", df_data)
         for idx, row in df_data.iterrows():
+            # print(data['fpath_key'].split('Pat_')[-1][:3])
+            # print('========')
+            # print(row.iloc[0].split('Pat_')[-1][:3])
             if data['fpath_key'].split('Pat_')[-1][:3] == row.iloc[0].split('Pat_')[-1][:3]:
                 pat_idx = idx
                 break
         corse_pred = df_corse_pos.iloc[pat_idx]
         # print('type:', type(corse_pred))
         data['corse_pred_int_key'] = corse_pred.to_numpy().astype(np.int32)
-        print('corse_pred', data['corse_pred_int_key'])
-        print('type_pred', type(data['corse_pred_int_key']))
+        # print('corse_pred', data['corse_pred_int_key'])
+        # print('type_pred', type(data['corse_pred_int_key']))
         print(data['corse_pred_int_key'][0],
               data['corse_pred_int_key'][1],
               data['corse_pred_int_key'][2],

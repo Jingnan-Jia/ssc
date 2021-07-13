@@ -27,6 +27,7 @@ from mymodules.myloss import get_loss
 from mymodules.networks.cnn_fc2d import get_net, ReconNet
 from mymodules.mydata import LoadScore
 from mymodules.inference import record_best_preds, round_to_5
+from mymodules.path import PathPos, PathPosInit
 
 LogType = Optional[Union[int, float, str]]  # int includes bool
 log_dict: Dict[str, LogType] = {}  # a global dict to store variables saved to log files
@@ -206,9 +207,31 @@ def train(id_: int, log_dict):
     label_file = "dataset/SSc_DeepLearning/GohScores.xlsx"
     seed = 49
     log_dict['data_shuffle_seed'] = seed
+    net = net.to(device)
+    print('move net t device')
 
-    all_loader = LoadScore(mypath, label_file, seed, args)
-    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
+    loss_fun = get_loss(loss=args.loss)
+    loss_fun_mae = nn.L1Loss()
+    lr = 1e-4
+    log_dict['lr'] = lr
+    opt = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=args.weight_decay)
+
+
+    if args.corse_pred_id!=0:
+        mypath_pos = PathPos(args.corse_pred_id)
+        mypath.corse_pred_dir = os.path.join(mypath_pos.id_dir, 'predicted_slices')
+        all_loader = LoadScore(mypath, label_file, seed, args)
+        all_load = all_loader.load(merge=args.corse_pred_id)
+        start_run('valid', net, all_load, device, loss_fun, loss_fun_mae, opt, mypath, 0)
+        load_dt = {'valid': all_load}
+        record_best_preds(net, load_dt, mypath, args)
+        log_dict = compute_metrics(mypath, args.eval_id, log_dict)
+        print('Finish all things!')
+        return log_dict
+
+    else:
+        all_loader = LoadScore(mypath, label_file, seed, args)
+        train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
 
     if args.eval_id:
         mypath2 = Path(args.eval_id)
@@ -235,14 +258,7 @@ def train(id_: int, log_dict):
     else:
         valid_mae_best = 10000
 
-    net = net.to(device)
-    print('move net t device')
 
-    loss_fun = get_loss(loss=args.loss)
-    loss_fun_mae = nn.L1Loss()
-    lr = 1e-4
-    log_dict['lr'] = lr
-    opt = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=args.weight_decay)
 
     epochs = args.epochs
 

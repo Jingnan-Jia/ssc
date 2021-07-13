@@ -9,8 +9,8 @@ import argparse
 parser = argparse.ArgumentParser(description="SSc score prediction.")
 
 parser.add_argument('--mode', choices=('train', 'infer', 'continue_train', 'transfer_learning'),
-                    help='mode', type=str, default='train')
-parser.add_argument('--eval_id', help='id used for inference, or continue_train', type=int, default=0)
+                    help='mode', type=str, default='infer')
+parser.add_argument('--eval_id', help='id used for inference, or continue_train', default='193_194_276_277')
 parser.add_argument('--train_recon', choices=(1, 0), help='if use ReconNet and its dataset', type=int, default=0)
 
 parser.add_argument('--net', choices=('vgg11_bn', 'cnn3fc1', 'cnn2fc1', 'vgg16', 'vgg19','resnet18', 'resnext50_32x4d',
@@ -23,6 +23,7 @@ parser.add_argument('--fc_m1', help='the number of nodes of last layer', type=in
 parser.add_argument('--total_folds', choices=(4, 5), help='5-fold training', type=int, default=4)
 parser.add_argument('--fold', choices=(1, 2, 3, 4), help='5-fold training', type=int, default=1)
 parser.add_argument('--level', choices=(1, 2, 3, 4, 5, 0), help='level of data, 0 denotes all', type=int, default=0)
+parser.add_argument('--corse_pred_id', help='if customer sampler?', type=int, default=0)
 
 parser.add_argument('--sampler', choices=(1, 0), help='if customer sampler?', type=int, default=0)
 parser.add_argument('--sys', choices=(1, 0), help='if synthesis_data?', type=int, default=1)
