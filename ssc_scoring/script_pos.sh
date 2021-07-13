@@ -18,8 +18,8 @@ slurm_dir=results/slurmlogs
 scontrol write batch_script ${job_id} ${slurm_dir}/slurm-${job_id}_args.sh
 cp mymodules/set_args_pos.py ${slurm_dir}/slurm-${job_id}_set_args.py  # backup setting
 
-idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=2 --mode='train' --infer_2nd=0 --eval_id=0 --level_node=0 --fold=3 --remark="train fine net" &
-idx=1; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=2 --mode='train' --infer_2nd=0 --eval_id=0 --level_node=0 --fold=4 --remark="train fine net" &
+idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=4 --mode='train' --infer_2nd=0 --eval_id=0 --level_node=0 --fold=1 --remark="train fine net" &
+idx=1; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=4 --mode='train' --infer_2nd=0 --eval_id=0 --level_node=0 --fold=2 --remark="train fine net" &
 
 wait
 

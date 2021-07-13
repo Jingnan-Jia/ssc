@@ -8,9 +8,9 @@ import argparse
 
 parser = argparse.ArgumentParser(description="SSc score prediction.")
 
-parser.add_argument('--mode', choices=('train', 'infer', 'continue_train'), help='mode', type=str, default='train')
-parser.add_argument('--eval_id', help='id used for inference, or continue_train', type=int, default=0)
-parser.add_argument('--fold', choices=(1, 2, 3, 4), help='1 to 4', type=int, default=4)
+parser.add_argument('--mode', choices=('train', 'infer', 'continue_train'), help='mode', type=str, default='infer')
+parser.add_argument('--eval_id', help='id used for inference, or continue_train', type=int, default=193)
+parser.add_argument('--fold', choices=(1, 2, 3, 4), help='1 to 4', type=int, default=1)
 parser.add_argument('--train_on_level', choices=(1, 2, 3, 4, 5, 0), help='level, 0 denotes all', type=int, default=1)
 parser.add_argument('--level_node', choices=(1, 0), help='if network has an extra level node', type=int, default=0)
 
@@ -31,7 +31,8 @@ parser.add_argument('--ts_level_nb', choices=(235, 240), help='if customer sampl
 
 parser.add_argument('--valid_period', help='how many epochs between 2 validation', type=int, default=5)
 
-parser.add_argument('--resample_z', help='resample along z axis', choices=(0, 256, 512, 800, 1024), type=int, default=1024)
+parser.add_argument('--resample_z', help='resample along z axis', choices=(0, 256, 512, 800, 1024),
+                    type=int, default=1024)
 parser.add_argument('--z_size', help='length of patch along z axil ', type=int, default=192)
 parser.add_argument('--y_size', help='length of patch along y axil ', type=int, default=256)
 parser.add_argument('--x_size', help='length of patch along x axil ', type=int, default=256)

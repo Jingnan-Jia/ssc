@@ -11,7 +11,7 @@ import monai
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
-from torch.utils.data import DataLoader
+from monai.data import DataLoader
 
 from ssc_scoring.mymodules.composed_trans import xformd_pos, xformd_score
 from ssc_scoring.mymodules.datasets import SysDataset
@@ -139,10 +139,10 @@ class LoadPos(LoaderInit):
         return data_name, np.array(data_label)
 
 
-    def xformd(self, mode):
+    def xformd(self, mode, mypath):
         return xformd_pos(mode, level_node=self.level_node,
                    train_on_level=self.train_on_level,
-                   z_size=self.z_size, y_size = self.y_size, x_size=self.x_size)
+                   z_size=self.z_size, y_size = self.y_size, x_size=self.x_size, mypath=mypath)
 
 
     def load(self, noxform=False):
@@ -154,27 +154,30 @@ class LoadPos(LoaderInit):
         tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
         vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]
         ts_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(ts_x, ts_y)]
-        if noxform:
-            tr_xf, vdaug_xf, vd_xf, ts_xf = None, None, None, None
-        else:
-            tr_xf, vdaug_xf, vd_xf, ts_xf = 'train', 'train', 'valid', 'test'
-        tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=self.xformd(tr_xf), replace_rate=0.2,
+        mypath = self.mypath if noxform else None
+        tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=self.xformd('train', mypath), replace_rate=0.2,
                                                   cache_num=cache_nb, num_init_workers=4, num_replace_workers=8)
-        vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd(vdaug_xf), num_workers=4,
+        vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('train', mypath), num_workers=4,
                                                 cache_rate=1)
-        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd(vd_xf), num_workers=4, cache_rate=1)
-        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=self.xformd(ts_xf),
+        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid', mypath), num_workers=4,
+                                             cache_rate=1)
+        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=self.xformd('valid', mypath),
                                                   cache_dir="persistent_cache")
-
-        train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.workers,
-                                      pin_memory=True, persistent_workers=True)
-        validaug_dataloader = DataLoader(vdaug_dataset, batch_size=self.batch_size, shuffle=False,
-                                         num_workers=self.workers,
+        if noxform:
+            train_dataloader = iter(tr_dataset)
+            validaug_dataloader = iter(vdaug_dataset)
+            valid_dataloader = iter(vd_dataset)
+            test_dataloader = iter(ts_dataset)
+        else:
+            train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.workers,
+                                          pin_memory=True, persistent_workers=True)
+            validaug_dataloader = DataLoader(vdaug_dataset, batch_size=self.batch_size, shuffle=False,
+                                             num_workers=self.workers,
+                                             pin_memory=True, persistent_workers=True)
+            valid_dataloader = DataLoader(vd_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
+                                          pin_memory=True, persistent_workers=True)
+            test_dataloader = DataLoader(ts_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
                                          pin_memory=True, persistent_workers=True)
-        valid_dataloader = DataLoader(vd_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
-                                      pin_memory=True, persistent_workers=True)
-        test_dataloader = DataLoader(ts_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
-                                     pin_memory=True, persistent_workers=True)
 
         return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
 
@@ -239,7 +242,8 @@ class LoadScore(LoaderInit):
 
     def load(self):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
-        # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
+        tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
+        print(tr_x)
         tr_dataset = SysDataset(tr_x, tr_y, transform=self.xformd("train", synthesis=self.sys, args=self.args), synthesis=self.sys)
         vd_data_aug = SysDataset(vd_x, vd_y, transform=self.xformd("validaug", synthesis=self.sys, args=self.args),
                                  synthesis=self.sys)

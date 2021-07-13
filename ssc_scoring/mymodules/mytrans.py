@@ -12,7 +12,7 @@ from monai.transforms import RandGaussianNoise
 from monai.transforms import ScaleIntensityRange, RandGaussianNoise, MapTransform, AddChannel
 from torchvision.transforms import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, RandomAffine
 import matplotlib.pyplot as plt
-
+import os
 TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
 class LoadDatad:
@@ -43,7 +43,7 @@ class LoadDatad:
                 'ori_world_key': world_pos,  # world position in mm, keep fixed,  a np.array with shape(-1, )
                 'space_key': sp,  # space,  a np.array with shape(-1, )
                 'origin_key': ori,  # origin,  a np.array with shape(-1, )
-                'fpath_key': fpath}  # full path, a string
+                'fpath_key': fpath}  # full path, a array of string
 
         return data
 
@@ -54,7 +54,8 @@ class AddChanneld:
         Apply the transform to `img`.
         """
         d = dict(data)
-        d['image_key'] = d['image_key'][None]
+        for key in d.keys():
+            d[key] = d[key][None]
         return d
 
 
@@ -468,7 +469,7 @@ class Clipd(MapTransform):
             d[key] = self.clip(d[key])
         return d
 
-class CascadedSlices(MapTransform):
+class CascadedSlices:
     """
     0. get 2D images with their "real labels" from excel
     1. get the 3D images and their 5 world positions using the Pos dataset loader
@@ -480,3 +481,58 @@ class CascadedSlices(MapTransform):
     def __call__(self, *args, **kwargs):
         return None
 
+
+class CoresPos:
+    def __init__(self, corse_fpath, data_fpath):
+        self.corse_fpath = corse_fpath
+        self.data_fpath = data_fpath
+
+    def __call__(self, data):
+        print('start corse pos extration ...')
+        df_corse_pos = pd.read_csv(self.corse_fpath, delimiter=',')
+        df_data = pd.read_csv(self.data_fpath, delimiter=',')
+        pat_idx = None
+        # print("df_data", df_data)
+        for idx, row in df_data.iterrows():
+            if data['fpath_key'].split('Pat_')[-1][:3] == row.iloc[0].split('Pat_')[-1][:3]:
+                pat_idx = idx
+                break
+        corse_pred = df_corse_pos.iloc[pat_idx]
+        # print('type:', type(corse_pred))
+        data['corse_pred_int_key'] = corse_pred.to_numpy().astype(np.int32)
+        print('corse_pred', data['corse_pred_int_key'])
+        print('type_pred', type(data['corse_pred_int_key']))
+        print(data['corse_pred_int_key'][0],
+              data['corse_pred_int_key'][1],
+              data['corse_pred_int_key'][2],
+              data['corse_pred_int_key'][3],
+              data['corse_pred_int_key'][4] )
+        return data
+
+class SliceFromCorsePos:
+    def __call__(self, d: dict):
+        print('start slice from corse pos ...')
+        img_3d = d['image_key']
+        img_2d_ls = []
+        img_2d_name_ls = []
+        pat_id = d['fpath_key'].split('Pat_')[-1][:3]
+        save_pat_dir = 'Pat_' + pat_id
+        for i, slice in enumerate([j for j in d['corse_pred_int_key']]):
+            img_2d_ls.append(img_3d[slice])
+            img_2d_name_ls.append(os.path.join(save_pat_dir, 'Level'+str(i+1)+'_middle.mha'))
+            img_2d_ls.append(img_3d[slice+1])
+            img_2d_name_ls.append(os.path.join(save_pat_dir, 'Level' + str(i + 1) + '_up.mha'))
+            img_2d_ls.append(img_3d[slice - 1])
+            img_2d_name_ls.append(os.path.join(save_pat_dir, 'Level' + str(i + 1) + '_down.mha'))
+
+        img_2d = np.array(img_2d_ls)
+        img_2d_name_ls = np.array(img_2d_name_ls)
+        d['image_key'] = img_2d.astype(np.float32)
+        d['fpath2save'] = img_2d_name_ls
+        d['fpath_key'] = np.array([d['fpath_key']])
+
+        print("d['fpath2save']", d['fpath2save'])
+        print(d.keys())
+        for key in d.keys():
+            print(key, type(d[key]))
+        return d

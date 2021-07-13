@@ -8,7 +8,9 @@ import monai
 
 from ssc_scoring.mymodules.mytrans import RandomAffined, RandomHorizontalFlipd, RandomVerticalFlipd, \
     RandGaussianNoised, LoadDatad, NormImgPosd, AddChanneld, RandomCropPosd,\
-    CenterCropPosd, CropLevelRegiond
+    CenterCropPosd, CropLevelRegiond,CoresPos, SliceFromCorsePos
+from monai.transforms import CastToTyped
+
 from ssc_scoring.mymodules.data_synthesis import SysthesisNewSampled
 
 def xformd_score(mode='train', synthesis=False, args=None):
@@ -65,9 +67,12 @@ def recon_transformd(mode='train'):
     return xforms
 
 
-def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256, x_size=256):
+def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256, x_size=256, mypath=None):
     xforms = [LoadDatad()]
-    if mode is not None:
+    if mypath is not None:
+        xforms.append(CoresPos(corse_fpath=mypath.pred_int(mode), data_fpath=mypath.data(mode)))
+        xforms.append(SliceFromCorsePos())
+    else:
         if level_node or train_on_level:
             xforms.append(CropLevelRegiond(level_node, train_on_level, height=z_size, rand_start=True))
         else:
@@ -77,8 +82,11 @@ def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256
 
             else:
                 xforms.extend([CenterCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
+            xforms.append(NormImgPosd())
 
-        xforms.extend([NormImgPosd(), AddChanneld()])
+    xforms.extend([AddChanneld()])
+    # xforms.extend([CastToTyped(keys = ('image_key'), dtype=('np.float32'))])
     transform = monai.transforms.Compose(xforms)
+
 
     return transform

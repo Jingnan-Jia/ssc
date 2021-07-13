@@ -32,79 +32,38 @@ from mymodules.set_args_pos import args
 from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae, compute_metrics
 import pandas as pd
 
-class CoresPos:
-    def __init__(self, corse_fpath, data_fpath):
-        self.corse_fpath = corse_fpath
-        self.data_fpath = data_fpath
+from monai.transforms import CastToTyped
 
-    def __call__(self, data):
-        df_corse_pos = pd.read_csv(self.corse_fpath)
-        df_data = pd.read_csv(self.data_fpath)
-        pat_idx = None
-        for idx, row in enumerate(df_corse_pos.iterrows()):
-            if data['pat_id'] in row['fpath']:
-                pat_idx = idx
-                break
-        corse_pred = df_corse_pos[pat_idx]
-        data['corse_world_key '] = corse_pred
-        return data
-
-class SliceFromCorsePos():
-    def __call__(self, d: dict):
-
-        img_3d = d['image_key']
-        img_2d_ls = []
-        img_2d_name_ls = []
-        for i, slice in enumerate([j for j in d['label_in_img']]):
-            img_2d_ls.append(img_3d[slice])
-            img_2d_name_ls.append('Level'+str(i+1)+'_middle.mha')
-            img_2d_ls.append(img_3d[slice+1])
-            img_2d_name_ls.append('Level' + str(i + 1) + '_up.mha')
-            img_2d_ls.append(img_3d[slice - 1])
-            img_2d_name_ls.append('Level' + str(i + 1) + '_down.mha')
-
-        img_2d = np.array(img_2d_ls)
-        img_2d_name_ls = np.array(img_2d_name_ls)
-        d['image_key'] = img_2d
-        d['fpath2save'] = img_2d_name_ls
-        return d
-
-
-def train(id: int, log_dict: dict):
-    mypath = PathPos(id)
+def train():
+    mypath = PathPos(args.eval_id)
 
     label_file = "dataset/SSc_DeepLearning/GohScores.xlsx"
-    log_dict['label_file'] = label_file
     seed = 49
-    log_dict['data_shuffle_seed'] = seed
-
     all_loader = LoadPos(0, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb, args.level_node,
-                           args.train_on_level, args.z_size, args.y_size, args.x_size, args.batch_size, args.workers)
+                           args.train_on_level, args.z_size, args.y_size, args.x_size, 1, 1)
     train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load(noxform=True)
 
-    dataloader_dict = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader}
-    dataloader_dict.update({'test': test_dataloader})
+    dataloader_dict = {'valid': valid_dataloader}
+    # , 'valid': valid_dataloader, 'validaug': validaug_dataloader}
+    # dataloader_dict.update({'test': test_dataloader})
     for mode, loader in dataloader_dict.items():
         print(f'start save slices for {mode}')
-        corse_pos = CoresPos(corse_fpath=mypath.world(mode), data_fpath=mypath.data(mode))
-        pos2slice = SliceFromCorsePos()  # d['image_key'] become 2D
-        for data in loader:
-            data = corse_pos(data)
-            data = pos2slice(data)  # one pos to 3 slices, total 15 slices
-            for img, fpath in zip(data['image_key'], data['fpath2save']):
-                futil.save_itk(img, fpath)
+        for batch_data in loader:  # one data, with shape (1, channel, x, y)
+            for slice, pth in zip(batch_data['image_key'][0], batch_data['fpath2save'][0]):  # img and path of each slice
+                full_pth = os.path.join(mypath.id_dir, 'predicted_slices', pth)
+                if not os.path.isdir(os.path.dirname(full_pth)):
+                    os.makedirs(os.path.dirname(full_pth))
+                print(full_pth)
+                print(batch_data['origin_key'][0][1:])
+                print(batch_data['space_key'][0][1:])
+                origin_ls = [float(i) for i in batch_data['origin_key'][0]][1:]
+                space_ls = [float(i) for i in batch_data['space_key'][0]][1:]
+                print('type_1', type(space_ls[0]))
+                futil.save_itk(full_pth, slice, origin_ls, space_ls)  # slice does not have origin and space along z
 
-        print('Finish all things!')
-    return log_dict
+    print('Finish all things!')
 
 
 if __name__ == "__main__":
-    # set some global variables here, like log_dict, device, amp
-    LogType = Optional[Union[int, float, str]]  # int includes bool
-    LogDict = Dict[str, LogType]
-    log_dict: LogDict = {}  # a global dict to store immutable variables saved to log files
 
-    record_file: str = PathPosInit().record_file
-    id: int = record_1st(record_file, args)  # write super parameters from set_args.py to record file.
-    log_dict = train(id, log_dict)
-    record_2nd(record_file, current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.
+    train()
