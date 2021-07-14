@@ -63,15 +63,21 @@ def sampler_by_disext(tr_y, sys_ratio=0.8):
 
 def compute_metrics(mypath: PathInit, mypath2=None, log_dict=None):
     for mode in ['train', 'valid', 'test', 'validaug']:
+        if mypath.project_name == 'score':
+            label = mypath.label(mode)
+            pred = mypath.pred_end5(mode)
+        else:
+            label = mypath.world(mode)
+            pred = mypath.pred_world(mode)
         try:
-            if (not os.path.isfile(mypath.world(mode))) and (mypath2 is not None):
+            if (not os.path.isfile(label)) and (mypath2 is not None):
                 # mypath2 = Path(eval_id)
                 shutil.copytree(mypath2.id_dir, mypath.id_dir)
 
-            out_dt = confusion(mypath.world(mode), mypath.pred_world(mode))
+            out_dt = confusion(label, pred)
             log_dict.update(out_dt)
 
-            icc_ = futil.icc(mypath.world(mode), mypath.pred_world(mode))
+            icc_ = futil.icc(label, pred)
             log_dict.update(icc_)
         except FileNotFoundError:
             continue

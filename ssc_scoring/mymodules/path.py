@@ -9,19 +9,27 @@ from typing import Union
 class PathInit:
     def __init__(self):
         self.results_dir: str = 'results'
+        self.project_name = self.set_project_name()
+
+    def set_project_name(self):
+        raise NotImplementedError
 
 
 class PathScoreInit(PathInit):
+    def set_project_name(self):
+        return 'score'
+
     def __init__(self):
         super().__init__()
-        self.project_name = 'score'
         self.record_file: str = os.path.join(self.results_dir, 'records_700.csv')
 
 
 class PathPosInit(PathInit):
+    def set_project_name(self):
+        return 'pos'
+
     def __init__(self):
         super().__init__()
-        self.project_name = 'position'
         self.record_file: str = os.path.join(self.results_dir, 'records_pos.csv')
 
 
@@ -32,7 +40,6 @@ class Path(PathInit):
         self.slurmlog_dir = os.path.join(self.results_dir, 'slurmlogs')
         self.data_dir = 'dataset'
         self.ori_data_dir = os.path.join(self.data_dir, 'SSc_DeepLearning')
-
         self.label_excel_fpath = os.path.join(self.data_dir, "GohScores.xlsx")
 
         if isinstance(id, (int, float)):
