@@ -90,11 +90,11 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid'
 
 
 def record_preds(mode, batch_y, pred, mypath):
-    batch_label = batch_y.cpu().detach().numpy().astype('Int64')
+    batch_label = batch_y.cpu().detach().numpy().astype('int')
     batch_preds = pred.cpu().detach().numpy()
-    batch_preds_int = batch_preds.astype('Int64')
+    batch_preds_int = batch_preds.astype('int')
     batch_preds_end5 = round_to_5(batch_preds_int)
-    batch_preds_end5 = batch_preds_end5.astype('Int64')
+    batch_preds_end5 = batch_preds_end5.astype('int')
 
     head = ['disext', 'gg', 'retp']
     futil.appendrows_to(mypath.label(mode), batch_label, head=head)
