@@ -55,7 +55,8 @@ class AddChanneld:
         """
         d = dict(data)
         for key in d.keys():
-            d[key] = d[key][None]
+            if key == 'image_key':
+                d[key] = d[key][None]
         return d
 
 

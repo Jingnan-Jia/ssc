@@ -40,7 +40,6 @@ def xformd_score(mode='train', synthesis=False, args=None):
                  gen_gg_as_retp=args.gen_gg_as_retp,
                  gg_increase=args.gg_increase))
         xforms.extend([
-            AddChanneld(),
             RandomAffined(keys=keys, degrees=rotation, translate=(shift, shift), scale=(1 - scale, 1 + scale)),
             # CenterCropd(image_size),
             RandomHorizontalFlipd(keys, p=horiflip),

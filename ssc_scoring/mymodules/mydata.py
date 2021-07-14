@@ -210,6 +210,7 @@ class LoadScore(LoaderInit):
         df_excel = self.df_excel
         file_prefix = "Level" + str(level)
         # 3 neighboring slices for one level
+        print(dir_pat)
         x_up = glob.glob(os.path.join(dir_pat, file_prefix + "_up.mha"))[0]
         x_middle = glob.glob(os.path.join(dir_pat, file_prefix + "_middle.mha"))[0]
         x_down = glob.glob(os.path.join(dir_pat, file_prefix + "_down.mha"))[0]
@@ -242,14 +243,7 @@ class LoadScore(LoaderInit):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
         # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
         # print(tr_x)
-        tr_dataset = SysDataset(tr_x, tr_y, transform=self.xformd("train", synthesis=self.sys, args=self.args), synthesis=self.sys)
-        vd_data_aug = SysDataset(vd_x, vd_y, transform=self.xformd("validaug", synthesis=self.sys, args=self.args),
-                                 synthesis=self.sys)
-        vd_dataset = SysDataset(vd_x, vd_y, transform=self.xformd("valid", synthesis=False, args=self.args), synthesis=False)
-        ts_dataset = SysDataset(ts_x, ts_y, transform=self.xformd("test", synthesis=False, args=self.args),
-                                synthesis=False)  # valid original data
-        sampler = sampler_by_disext(tr_y, self.sys_ratio) if self.sampler else None
-        print(f'sampler is {sampler}')
+
         if merge != 0:
             all_x = [*tr_x, *vd_x, *ts_x]
             all_y = [*tr_y, *vd_y, *ts_y]
@@ -261,7 +255,16 @@ class LoadScore(LoaderInit):
 
         # else:
         #     raise Exception("synthesis_data can not be set with sampler !")
-
+        tr_dataset = SysDataset(tr_x, tr_y, transform=self.xformd("train", synthesis=self.sys, args=self.args),
+                                synthesis=self.sys)
+        vd_data_aug = SysDataset(vd_x, vd_y, transform=self.xformd("validaug", synthesis=self.sys, args=self.args),
+                                 synthesis=self.sys)
+        vd_dataset = SysDataset(vd_x, vd_y, transform=self.xformd("valid", synthesis=False, args=self.args),
+                                synthesis=False)
+        ts_dataset = SysDataset(ts_x, ts_y, transform=self.xformd("test", synthesis=False, args=self.args),
+                                synthesis=False)  # valid original data
+        sampler = sampler_by_disext(tr_y, self.sys_ratio) if self.sampler else None
+        print(f'sampler is {sampler}')
         tr_shuffle = True if sampler is None else False
         train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=tr_shuffle, num_workers=self.workers,
                                       sampler=sampler, pin_memory=True)

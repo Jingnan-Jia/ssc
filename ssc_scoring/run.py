@@ -14,6 +14,8 @@ import myutil.myutil as futil
 import pandas as pd
 import torch
 import torch.nn as nn
+import sys
+sys.path.append("..")
 
 # import streamlit as st
 matplotlib.use('Agg')
@@ -222,7 +224,7 @@ def train(id_: int, log_dict):
         mypath.corse_pred_dir = os.path.join(mypath_pos.id_dir, 'predicted_slices')
         all_loader = LoadScore(mypath, label_file, seed, args)
         all_load = all_loader.load(merge=args.corse_pred_id)
-        start_run('valid', net, all_load, device, loss_fun, loss_fun_mae, opt, mypath, 0)
+        start_run('valid', net, all_load, device, loss_fun, loss_fun_mae, opt, mypath, 1000)
         load_dt = {'valid': all_load}
         record_best_preds(net, load_dt, mypath, args)
         log_dict = compute_metrics(mypath, args.eval_id, log_dict)

@@ -26,7 +26,7 @@ parser.add_argument('--level', choices=(1, 2, 3, 4, 5, 0), help='level of data, 
 parser.add_argument('--corse_pred_id', help='if customer sampler?', default='193_194_276_277')
 
 parser.add_argument('--sampler', choices=(1, 0), help='if customer sampler?', type=int, default=0)
-parser.add_argument('--sys', choices=(1, 0), help='if synthesis_data?', type=int, default=1)
+parser.add_argument('--sys', choices=(1, 0), help='if synthesis_data?', type=int, default=0)
 parser.add_argument('--sys_ratio', help='ratio of sys data in the whole data', type=float, default=0.5)
 parser.add_argument('--sys_pro_in_0', help='sys_pro_in_0', type=float, default=0.0)  # must be a float number !
 
