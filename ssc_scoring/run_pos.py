@@ -202,7 +202,7 @@ def train(id: int, log_dict: dict):
     train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
     net = net.to(device)
     if args.eval_id:
-        valid_mae_best = eval_net_mae(args.eval_id, mypath)
+        valid_mae_best = eval_net_mae(args.eval_id, mypath, PathPos(args.eval_id))
         net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))  # model_fpath need to exist
     else:
         valid_mae_best = 10000
@@ -230,7 +230,7 @@ def train(id: int, log_dict: dict):
     dataloader_dict = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader}
     dataloader_dict.update({'test': test_dataloader})
     record_best_preds(net, dataloader_dict, mypath, args)
-    log_dict = compute_metrics(mypath, args.eval_id, log_dict)
+    log_dict = compute_metrics(mypath, PathPos(args.eval_id), log_dict)
     print('Finish all things!')
     return log_dict
 
@@ -241,7 +241,6 @@ if __name__ == "__main__":
     LogDict = Dict[str, LogType]
     log_dict: LogDict = {}  # a global dict to store immutable variables saved to log files
 
-    record_file: str = PathPosInit().record_file
-    id: int = record_1st(record_file, args)  # write super parameters from set_args.py to record file.
+    id: int = record_1st('pos', args)  # write super parameters from set_args.py to record file.
     log_dict = train(id, log_dict)
-    record_2nd(record_file, current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.
+    record_2nd('pos', current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.

@@ -7,7 +7,7 @@ import datetime
 import os
 import shutil
 import time
-from ssc_scoring.mymodules.path import PathInit
+from ssc_scoring.mymodules.path import PathInit, PathScoreInit, PathPosInit, PathPos
 
 import myutil.myutil as futil
 import numpy as np
@@ -16,7 +16,7 @@ import pandas as pd
 from filelock import FileLock
 
 from ssc_scoring.mymodules.confusion_test import confusion
-from ssc_scoring.mymodules.path import PathPos as Path
+# from ssc_scoring.mymodules.path import PathPos as Path
 # from mymodules.set_args_pos import args
 from torch.utils.data import WeightedRandomSampler
 
@@ -61,11 +61,11 @@ def sampler_by_disext(tr_y, sys_ratio=0.8):
     return sampler
 
 
-def compute_metrics(mypath: PathInit, eval_id=None, log_dict=None):
+def compute_metrics(mypath: PathInit, mypath2=None, log_dict=None):
     for mode in ['train', 'valid', 'test', 'validaug']:
         try:
-            if (not os.path.isfile(mypath.world(mode))) and (eval_id is not None):
-                mypath2 = Path(eval_id)
+            if (not os.path.isfile(mypath.world(mode))) and (mypath2 is not None):
+                # mypath2 = Path(eval_id)
                 shutil.copytree(mypath2.id_dir, mypath.id_dir)
 
             out_dt = confusion(mypath.world(mode), mypath.pred_world(mode))
@@ -84,8 +84,8 @@ def get_mae_best(fpath):
     return mae
 
 
-def eval_net_mae(eval_id: int, mypath: Path):
-    mypath2 = Path(eval_id)
+def eval_net_mae(mypath, mypath_src):
+    mypath2 = mypath_src
     shutil.copy(mypath2.model_fpath, mypath.model_fpath)  # make sure there is at least one model there
     for mo in ['train', 'validaug', 'valid', 'test']:
         try:
@@ -97,7 +97,7 @@ def eval_net_mae(eval_id: int, mypath: Path):
     return valid_mae_best
 
 
-def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int, args) -> pd.DataFrame:
+def add_best_metrics(df: pd.DataFrame, mypath, mypath2, index: int, args) -> pd.DataFrame:
     modes = ['train', 'validaug', 'valid', 'test']
     if mypath.project_name == 'score':
         metrics_min = 'mae_end5'
@@ -112,7 +112,7 @@ def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int, args) -> pd.Dat
             try:
                 loss_df = pd.read_csv(mypath.loss(mode))
             except FileNotFoundError:  # copy loss files from old directory to here
-                mypath2 = Path(args.eval_id)
+
                 shutil.copy(mypath2.loss(mode), mypath.loss(mode))
                 try:
                     loss_df = pd.read_csv(mypath.loss(mode))
@@ -130,7 +130,7 @@ def add_best_metrics(df: pd.DataFrame, mypath: Path, index: int, args) -> pd.Dat
     return df
 
 
-def write_and_backup(df: pd.DataFrame, record_file: str, mypath: Path):
+def write_and_backup(df: pd.DataFrame, record_file: str, mypath):
     df.to_csv(record_file, index=False)
     shutil.copy(record_file, os.path.join(mypath.results_dir, 'cp_' + os.path.basename(record_file)))
     df_lastrow = df.iloc[[-1]]
@@ -175,13 +175,20 @@ def get_df_id(record_file: str):
     return df, new_id
 
 
-def record_1st(record_file, args):
+def record_1st(task, args):
     """
     First record in this experiment.
     :param record_file: a file to store super parameters and metrics
     :param args: arguments which need to be saved to record_file
     :return: None
     """
+    if task=='score':
+        record_file = PathScoreInit().record_file
+        from ssc_scoring.mymodules.path import PathScore as Path
+    else:
+        record_file = PathPosInit().record_file
+        from ssc_scoring.mymodules.path import PathPos as Path
+
     lock = FileLock(record_file + ".lock")  # lock the file, avoid other processes write other things
     with lock:  # with this lock,  open a file for exclusive access
         with open(record_file, 'a') as csv_file:
@@ -210,7 +217,7 @@ def record_1st(record_file, args):
     return new_id
 
 
-def record_2nd(record_file, current_id, log_dict, args):
+def record_2nd(task, current_id, log_dict, args):
     """
     Second time to save logs
     :param record_file:
@@ -219,6 +226,12 @@ def record_2nd(record_file, current_id, log_dict, args):
     :param args: used to get metrics
     :return:
     """
+    if task=='score':
+        record_file = PathScoreInit().record_file
+        from ssc_scoring.mymodules.path import PathScore as Path
+    else:
+        record_file = PathPosInit().record_file
+        from ssc_scoring.mymodules.path import PathPos as Path
     lock = FileLock(record_file + ".lock")
     with lock:  # with this lock,  open a file for exclusive access
         df = pd.read_csv(record_file)
@@ -243,7 +256,7 @@ def record_2nd(record_file, current_id, log_dict, args):
         df.at[index, 'elapsed_time'] = elapsed_time
 
         mypath = Path(current_id)  # evaluate old model
-        df = add_best_metrics(df, mypath, index, args)
+        df = add_best_metrics(df, mypath, Path(args.eval_id), index, args)
 
         for key, value in log_dict.items():  # convert numpy to str before writing all log_dict to csv file
             if type(value) in [np.ndarray, list]:

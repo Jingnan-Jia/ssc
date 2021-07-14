@@ -222,18 +222,18 @@ def train(id_: int, log_dict):
     if args.corse_pred_id!=0:
         mypath_pos = PathPos(args.corse_pred_id)
         mypath.corse_pred_dir = os.path.join(mypath_pos.id_dir, 'predicted_slices')
-        all_loader = LoadScore(mypath, label_file, seed, args)
-        all_load = all_loader.load(merge=args.corse_pred_id)
-        start_run('valid', net, all_load, device, loss_fun, loss_fun_mae, opt, mypath, 1000)
-        load_dt = {'valid': all_load}
-        record_best_preds(net, load_dt, mypath, args)
-        log_dict = compute_metrics(mypath, args.eval_id, log_dict)
-        print('Finish all things!')
-        return log_dict
+        # all_loader = LoadScore(mypath, label_file, seed, args)
+        # all_load = all_loader.load(merge=args.corse_pred_id)
+        # start_run('valid', net, all_load, device, loss_fun, loss_fun_mae, opt, mypath, 1000)
+        # load_dt = {'valid': all_load}
+        # record_best_preds(net, load_dt, mypath, args)
+        # log_dict = compute_metrics(mypath, args.eval_id, log_dict)
+        # print('Finish all things!')
+        # return log_dict
 
-    else:
-        all_loader = LoadScore(mypath, label_file, seed, args)
-        train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
+    # else:
+    all_loader = LoadScore(mypath, label_file, seed, args)
+    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
 
     if args.eval_id:
         mypath2 = Path(args.eval_id)
@@ -264,21 +264,21 @@ def train(id_: int, log_dict):
 
     epochs = args.epochs
 
-    for i in range(epochs):  # 20000 epochs
-        start_run('train', net, train_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
-
-        # run the validation
-        if (i % args.valid_period == 0) or (i > epochs * 0.8):
-            # with torch.profiler.record_function("valid_validaug_test"):
-            valid_mae_best = start_run('valid', net, valid_dataloader, device, loss_fun, loss_fun_mae, opt,
-                                       mypath, i, valid_mae_best)
-            start_run('validaug', net, validaug_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
-            start_run('test', net, test_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
-    print('start save trace')
+    # for i in range(epochs):  # 20000 epochs
+    #     start_run('train', net, train_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+    #
+    #     # run the validation
+    #     if (i % args.valid_period == 0) or (i > epochs * 0.8):
+    #         # with torch.profiler.record_function("valid_validaug_test"):
+    #         valid_mae_best = start_run('valid', net, valid_dataloader, device, loss_fun, loss_fun_mae, opt,
+    #                                    mypath, i, valid_mae_best)
+    #         start_run('validaug', net, validaug_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+    #         start_run('test', net, test_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+    # print('start save trace')
 
     data_loaders = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader, 'test': test_dataloader}
     record_best_preds(net, data_loaders, mypath, args)
-    log_dict = compute_metrics(mypath, args.eval_id, log_dict)
+    log_dict = compute_metrics(mypath, Path(args.eval_id), log_dict)
     print('Finish all things!')
     return log_dict
 
@@ -289,7 +289,6 @@ if __name__ == "__main__":
     LogDict = Dict[str, LogType]
     log_dict: LogDict = {}  # a global dict to store immutable variables saved to log files
 
-    record_file: str = PathScoreInit().record_file
-    id: int = record_1st(record_file, args)  # write super parameters from set_args.py to record file.
+    id: int = record_1st('score', args)  # write super parameters from set_args.py to record file.
     log_dict = train(id, log_dict)
-    record_2nd(record_file, current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.
+    record_2nd('score', current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.
