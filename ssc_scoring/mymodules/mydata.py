@@ -118,8 +118,7 @@ class LoaderInit:
         vd_x, vd_y = self.load_data_of_pats(vd_pt)
         ts_x, ts_y = self.load_data_of_pats(ts_pt)
 
-        for x, y, mode in zip([tr_x, vd_x, ts_x], [tr_y, vd_y, ts_y], ['train', 'valid', 'test']):
-            self.save_xy(x, y, mode)
+
         return tr_x, tr_y, vd_x, vd_y, ts_x, ts_y
 
     def xformd(self, mode):
@@ -151,6 +150,8 @@ class LoadPos(LoaderInit):
 
     def load(self):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
+        for x, y, mode in zip([tr_x, vd_x, ts_x], [tr_y, vd_y, ts_y], ['train', 'valid', 'test']):
+            self.save_xy(x, y, mode)
         # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:6], tr_y[:6], vd_x[:6], vd_y[:6], ts_x[:6], ts_y[:6]
         # print(tr_x)
         cache_nb = 10 if len(tr_x) < 50 else 50
@@ -241,9 +242,12 @@ class LoadScore(LoaderInit):
 
     def load(self, merge=0):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
+        for x, y, mode in zip([tr_x, vd_x, ts_x], [tr_y, vd_y, ts_y], ['train', 'valid', 'test']):
+            self.save_xy(x, y, mode)
         # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:10], tr_y[:10], vd_x[:10], vd_y[:10], ts_x[:10], ts_y[:10]
         # print(tr_x)
-
+        print('valid_x for score')
+        print(vd_x)
         if merge != 0:
             all_x = [*tr_x, *vd_x, *ts_x]
             all_y = [*tr_y, *vd_y, *ts_y]
@@ -297,6 +301,8 @@ class LoadPos2Score(LoaderInit):
     def load(self):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
         cache_nb = 10 if len(tr_x) < 50 else 50
+        print('valid_x for pos2score')
+        print(vd_x)
 
         tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
         vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]

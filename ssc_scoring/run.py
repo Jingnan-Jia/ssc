@@ -219,7 +219,7 @@ def train(id_: int, log_dict):
     opt = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=args.weight_decay)
 
 
-    if args.corse_pred_id!=0:
+    if args.corse_pred_id not in [0, None] :
         mypath_pos = PathPos(args.corse_pred_id)
         mypath.corse_pred_dir = os.path.join(mypath_pos.id_dir, 'predicted_slices')
         # all_loader = LoadScore(mypath, label_file, seed, args)
