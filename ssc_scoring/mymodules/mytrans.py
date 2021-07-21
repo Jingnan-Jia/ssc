@@ -15,6 +15,26 @@ import matplotlib.pyplot as plt
 import os
 TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
+class RescaleToNeg1500Pos1500:
+    def __init__(self):
+        self.norm = NormNeg1To1d()
+
+    def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
+        data = self.norm(data)
+
+        data['image_key'] =  data['image_key'] * 1500
+        return data
+
+class NormNeg1To1d:
+    def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
+        if isinstance(data['image_key'], torch.Tensor):
+            min_value, max_value = torch.min(data['image_key']), torch.max(data['image_key'])
+        else:
+            min_value, max_value = np.min(data['image_key']), np.max(data['image_key'])
+
+        data['image_key'] = ((data['image_key'] - min_value)/(max_value - min_value) - 0.5) * 2
+        return data
+
 class LoadDatad:
     # def __init__(self):
         # self.normalize0to1 = ScaleIntensityRange(a_min=-1500.0, a_max=1500.0, b_min=0.0, b_max=1.0, clip=True)
