@@ -12,7 +12,7 @@ import myutil.myutil as futil
 import numpy as np
 import torch
 from torchvision.transforms import CenterCrop, RandomAffine
-
+import os
 import matplotlib.pyplot as plt
 from statistics import mean
 from monai.transforms import MapTransform
@@ -29,6 +29,10 @@ sys_nb = manager.Value('sys_nb', 0)
 
 
 def savefig(save_flag, img, fpath):
+    directory = os.path.dirname(fpath)
+    if not os.path.isdir(directory):
+        os.makedirs(directory)
+
     if save_flag:
         fig, ax = plt.subplots()
         ax.imshow(img, cmap='gray')
@@ -398,7 +402,7 @@ class SysthesisNewSampled(MapTransform):
                         intersection_mask * img_wt_retp)  # gg + retp
                 final = img_wt_retp_gg * (1 - intersection_mask) + merge
                 y_name = '_'.join([str(y[0]), str(y[1]), str(y[2])])
-                savefig(save_img, final, 'image_samples/15_img_wt_retp_gg_final_' + str(self.counter) + y_name + '.png')
+                savefig(save_img, final, 'image_samples/15_img_wt_retp_gg_final_' + str(self.counter)+ '_'+ y_name + '.png')
 
                 # retp part
 
