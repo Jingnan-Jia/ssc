@@ -218,13 +218,15 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
                 transform=trans, fontsize='large')
         ax.text(0.98, mean_diff - (sd_limit * std_diff) + offset, f'{mean_diff - sd_limit * std_diff:.2f}', ha="right", va="bottom",
                 transform=trans, fontsize='large')
+        # ax.text(0.05, 0.9 * (2*half_ylim), 'A)', ha="left", fontsize='xx-large', transform=trans)
+
 
     if ynotdiff:
-        ax.set_ylabel('Prediction (slices)', fontsize=15)
-        ax.set_xlabel('Label (slices)', fontsize=15)
+        ax.set_ylabel('Prediction (number of slice)', fontsize=15)
+        ax.set_xlabel('Label (number of slice)', fontsize=15)
     else:
         ax.set_ylabel('Difference (slices)', fontsize=15)
-        ax.set_xlabel('Mean (slices)', fontsize=15)
+        ax.set_xlabel('Mean (number of slice)', fontsize=15)
     ax.tick_params(labelsize=13)
     fig.tight_layout()
     return fig
