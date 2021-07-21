@@ -8,7 +8,7 @@ import monai
 
 from ssc_scoring.mymodules.mytrans import RandomAffined, RandomHorizontalFlipd, RandomVerticalFlipd, \
     RandGaussianNoised, LoadDatad, NormImgPosd, AddChanneld, RandomCropPosd,\
-    CenterCropPosd, CropLevelRegiond,CoresPos, SliceFromCorsePos
+    CenterCropPosd, CropLevelRegiond,CoresPos, SliceFromCorsePos, NormNeg1To1d, RescaleToNeg1500Pos1500
 from monai.transforms import CastToTyped
 
 from ssc_scoring.mymodules.data_synthesis import SysthesisNewSampled
@@ -50,7 +50,12 @@ def xformd_score(mode='train', synthesis=False, args=None):
     else:
         xforms.extend([AddChanneld()])
 
-    xforms.append(NormImgPosd())
+    # xforms.append(NormImgPosd())
+    # xforms.append(NormNeg1To1d())
+    xforms.append(RescaleToNeg1500Pos1500())
+
+
+
 
     transform = transforms.Compose(xforms)
 
