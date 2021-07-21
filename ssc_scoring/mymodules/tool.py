@@ -67,12 +67,12 @@ def compute_metrics(mypath: PathInit, mypath2=None, log_dict=None):
             label = mypath.label(mode)
             pred = mypath.pred_end5(mode)
         else:
-            label = mypath.world(mode)
+            label = mypath.world(mode)  # compare world metrics makes sure all experiments are compatible
             pred = mypath.pred_world(mode)
         try:
             if (not os.path.isfile(label)) and (mypath2 is not None):
                 # mypath2 = Path(eval_id)
-                shutil.copytree(mypath2.id_dir, mypath.id_dir)
+                shutil.copytree(mypath2.id_dir, mypath.id_dir, dirs_exist_ok=True)
 
             out_dt = confusion(label, pred)
             log_dict.update(out_dt)
@@ -130,7 +130,7 @@ def add_best_metrics(df: pd.DataFrame, mypath, mypath2, index: int, args) -> pd.
             mae = loss_df['mae'][best_index]
             if mypath.project_name == 'score':
                 mae_end5 = loss_df['mae_end5'][best_index]
-                df.at[index, mode + '_mae_end5'] = round(loss, 2)
+                df.at[index, mode + '_mae_end5'] = round(mae_end5, 2)
         df.at[index, mode + '_loss'] = round(loss, 2)
         df.at[index, mode + '_mae'] = round(mae, 2)
     return df
@@ -202,7 +202,7 @@ def record_1st(task, args):
             if args.mode=='train':
                 mypath = Path(new_id, check_id_dir=True)  # to check if id_dir already exist
             else:
-                mypath = Path(new_id)
+                mypath = Path(new_id, check_id_dir=True)
 
             start_date = datetime.date.today().strftime("%Y-%m-%d")
             start_time = datetime.datetime.now().time().strftime("%H:%M:%S")
