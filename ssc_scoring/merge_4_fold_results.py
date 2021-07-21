@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 from mymodules.confusion_test import confusion
+import myutil.myutil as futil
 
 # pred_1 = "/data/jjia/ssc_scoring/observer_agreement/16_patients/LKT2_16patients.csv"
 #
@@ -13,7 +14,7 @@ from mymodules.confusion_test import confusion
 # label_1 = "/data/jjia/ssc_scoring/observer_agreement/16_patients/ground_truth_16patients.csv"
 
 # run_pos
-run_pos = 1
+run_pos = 0
 
 if run_pos:
     from mymodules.path import PathPos as Path
@@ -25,10 +26,12 @@ if run_pos:
     ex_ls = [193, 194, 276, 277]
     # ex_ls = [279, 280, 205, 278]
     # ex_ls = [286, 285, 283, 284]
+
 else:
     from mymodules.path import PathScore as Path
     label_postfix = "_label"
     pred_postfix = "_pred_int_end5"
+    ex_ls = [1585, 1586, 1587, 1588]
 
     # score prediction
     # ex_ls = [1405, 1404, 1411, 1410]
@@ -36,7 +39,7 @@ else:
     # ex_ls = [1136, 1132, 1135, 1134]
     # ex_ls = [1127, 1128, 1129, 1130]
 
-    ex_ls = [1405, 1404, 1411, 1410]
+    # ex_ls = [1405, 1404, 1411, 1410]
     # ex_ls = [1123, 1118, 1124, 1120]
     # ex_ls = [1481, 1114, 1115, 1116]
 
@@ -57,7 +60,7 @@ for mode in ['train', 'validaug', 'valid', 'test']:
             pred_1 = Path(id=ex_id).pred(mode)
         else:
             pred_1 = Path(id=ex_id).pred_end5(mode)
-        label_1 = Path(id=ex_id).pred(mode)
+        label_1 = Path(id=ex_id).label(mode)
 
         if os.path.isfile(pred_1):
             df_label = pd.read_csv(label_1)
@@ -128,6 +131,7 @@ for mode in [ 'train', 'validaug', 'valid', 'test']:
             bland_in_1_mean_std = None
             adap_markersize = 1
         confusion(label_1, pred_1, bland_in_1_mean_std=bland_in_1_mean_std, adap_markersize=adap_markersize)
-
+        icc = futil.icc(label_1, pred_1)
+        print('icc: ', icc)
 
     print("finish")
