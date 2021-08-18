@@ -276,9 +276,11 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
 
         ax_2.plot(x_reference, m * x_reference + b, '--', color='black', linewidth=1) # light gray
         ax_2.plot(x_reference, x_reference, '-', color='black', linewidth=1) # light gray
-
-        ax_2.text(0.1, 0.7, f'y = {m:.2f}x + {b:.2f}\nR\N{SUPERSCRIPT TWO} = {r_value**2: .2f}',
+        # ax_2.text(0.1, 0.7, '---  Regression line',
+        #           ha="left", fontsize='large', transform=ax_2.transAxes)
+        ax_2.text(0.1, 0.7, f'--  Regression line\ny = {m:.2f}x + {b:.2f}\nR\N{SUPERSCRIPT TWO} = {r_value**2: .2f}',
                   ha="left", fontsize='large', transform=ax_2.transAxes)
+        # ax_2.text(0.05, 0.9, 'B)', ha="left", fontsize='xx-large', transform=ax_2.transAxes)
     else:
         for plot_id, column in enumerate(df_label.columns):
             label = df_label[column].to_numpy().reshape(-1, )
@@ -293,6 +295,8 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
             print(column,'linear regression m, b, r^2:', slope, intercept, r_value ** 2)
 
             ax_2.plot(x_reference, m * x_reference + b, '--', color='gray')  # light gray
+            # ax_2.text(0.1, 0.7, '---  Regression line',
+            #           ha="left", fontsize='large', transform=ax_2.transAxes)
             ax_2.text(0.1, 0.7, f'y = {m:.2f}x + {b:.2f}\nR\N{SUPERSCRIPT TWO} = {r_value ** 2: .2f}',
                       ha="left", fontsize='large', transform=ax_2.transAxes)
 

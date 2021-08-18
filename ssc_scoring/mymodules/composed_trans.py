@@ -8,7 +8,7 @@ import monai
 
 from ssc_scoring.mymodules.mytrans import RandomAffined, RandomHorizontalFlipd, RandomVerticalFlipd, \
     RandGaussianNoised, LoadDatad, NormImgPosd, AddChanneld, RandomCropPosd,\
-    CenterCropPosd, CropLevelRegiond,CoresPos, SliceFromCorsePos, NormNeg1To1d, RescaleToNeg1500Pos1500
+    CenterCropPosd, CropLevelRegiond,CoresPosd, SliceFromCorsePosd, NormNeg1To1d, RescaleToNeg1500Pos1500d
 from monai.transforms import CastToTyped
 
 from ssc_scoring.mymodules.data_synthesis import SysthesisNewSampled
@@ -31,8 +31,8 @@ def xformd_score(mode='train', synthesis=False, args=None):
     if mode in ['train', 'validaug']:
         if synthesis:
             xforms.append(SysthesisNewSampled(keys=keys,
-                                              retp_fpath="/data/jjia/ssc_scoring/ssc_scoring/dataset/special_samples/retp.mha",
-                                              gg_fpath="/data/jjia/ssc_scoring/ssc_scoring/dataset/special_samples/gg.mha",
+                                              retp_fpath="/data/jjia/ssc_scoring/ssc_scoring/dataset/special_samples/ret/ret.mha",
+                                              gg_fpath="/data/jjia/ssc_scoring/ssc_scoring/dataset/special_samples/gg/gg.mha",
                                               mode=mode, sys_pro_in_0=args.sys_pro_in_0,
                  retp_blur=args.retp_blur,
                  gg_blur=args.gg_blur,
@@ -52,10 +52,7 @@ def xformd_score(mode='train', synthesis=False, args=None):
 
     # xforms.append(NormImgPosd())
     # xforms.append(NormNeg1To1d())
-    xforms.append(RescaleToNeg1500Pos1500())
-
-
-
+    xforms.append(RescaleToNeg1500Pos1500d())
 
     transform = transforms.Compose(xforms)
 
@@ -65,8 +62,8 @@ def xformd_score(mode='train', synthesis=False, args=None):
 
 def xformd_pos2score(mode, mypath):
     xforms = [LoadDatad(),
-              CoresPos(corse_fpath=mypath.pred_int(mode), data_fpath=mypath.data(mode)),
-              SliceFromCorsePos(),
+              CoresPosd(corse_fpath=mypath.pred_int(mode), data_fpath=mypath.data(mode)),
+              SliceFromCorsePosd(),
               AddChanneld()]
 
     transform = monai.transforms.Compose(xforms)
@@ -89,8 +86,10 @@ def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256
     if level_node or train_on_level:
         xforms.append(CropLevelRegiond(level_node, train_on_level, height=z_size, rand_start=True))
     else:
+        # pass
         if mode == 'train':
             # xforms.extend([RandomCropPosd(), RandGaussianNoised()])
+            # pass
             xforms.extend([RandomCropPosd(z_size=z_size, y_size=y_size, x_size=x_size)])
 
         else:

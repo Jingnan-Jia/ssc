@@ -118,9 +118,6 @@ class ResNet(nn.Module):
     def __init__(self,
                  block,
                  layers,
-                 sample_input_D,
-                 sample_input_H,
-                 sample_input_W,
                  num_seg_classes,
                  shortcut_type='B',
                  no_cuda=False):

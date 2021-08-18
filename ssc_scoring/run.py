@@ -259,22 +259,24 @@ def train(id_: int, log_dict):
             raise Exception("wrong mode: " + args.mode)
     else:
         valid_mae_best = 10000
-
-
+    if args.kd_t_name:
+        from ssc_scoring.mymodules.networks.kd import get_enc_t, EncSPlusConv
+        enc_t = get_enc_t(args.kd_t_name)
+        enc_s = EncSPlusConv(enc_t, net)
 
     epochs = args.epochs
 
-    # for i in range(epochs):  # 20000 epochs
-    #     start_run('train', net, train_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
-    #
-    #     # run the validation
-    #     if (i % args.valid_period == 0) or (i > epochs * 0.8):
-    #         # with torch.profiler.record_function("valid_validaug_test"):
-    #         valid_mae_best = start_run('valid', net, valid_dataloader, device, loss_fun, loss_fun_mae, opt,
-    #                                    mypath, i, valid_mae_best)
-    #         start_run('validaug', net, validaug_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
-    #         start_run('test', net, test_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
-    # print('start save trace')
+    for i in range(epochs):  # 20000 epochs
+        start_run('train', net, train_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+
+        # run the validation
+        if (i % args.valid_period == 0) or (i > epochs * 0.8):
+            # with torch.profiler.record_function("valid_validaug_test"):
+            valid_mae_best = start_run('valid', net, valid_dataloader, device, loss_fun, loss_fun_mae, opt,
+                                       mypath, i, valid_mae_best)
+            start_run('validaug', net, validaug_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+            start_run('test', net, test_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+    print('start save trace')
 
     data_loaders = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader, 'test': test_dataloader}
     record_best_preds(net, data_loaders, mypath, args)

@@ -13,11 +13,11 @@ all_dir = '/data/jjia/ssc_scoring/ssc_scoring/results/models_pos/' + '_'.join([s
 if not os.path.isdir(all_dir):
     os.makedirs(all_dir)
 
-# for ex_id in ex_ls:
-#     source_dir = PathPos(id=ex_id).id_dir + '/predicted_slices'
-#     file_names = os.listdir(source_dir)
-#     for file_name in file_names:
-#         shutil.copy(os.path.join(source_dir, file_name), os.path.join(all_dir,file_name))
+for ex_id in ex_ls:
+    source_dir = PathPos(id=ex_id).id_dir + '/predicted_slices'
+    file_names = os.listdir(source_dir)
+    for file_name in file_names:
+        shutil.move(os.path.join(source_dir, file_name), os.path.join(all_dir,file_name))
 
 
 source_dir = PathPos().ori_data_dir

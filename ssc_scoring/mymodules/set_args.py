@@ -9,8 +9,8 @@ import argparse
 parser = argparse.ArgumentParser(description="SSc score prediction.")
 
 parser.add_argument('--mode', choices=('train', 'infer', 'continue_train', 'transfer_learning'),
-                    help='mode', type=str, default='infer')
-parser.add_argument('--eval_id', help='id used for inference, or continue_train', default=1410)
+                    help='mode', type=str, default='train')
+parser.add_argument('--eval_id', help='id used for inference, or continue_train', default=0)
 parser.add_argument('--train_recon', choices=(1, 0), help='if use ReconNet and its dataset', type=int, default=0)
 
 parser.add_argument('--net', choices=('vgg11_bn', 'cnn3fc1', 'cnn2fc1', 'vgg16', 'vgg19','resnet18', 'resnext50_32x4d',
@@ -26,14 +26,14 @@ parser.add_argument('--level', choices=(1, 2, 3, 4, 5, 0), help='level of data, 
 parser.add_argument('--corse_pred_id', help='if customer sampler?', default=None)  # 193_194_276_277
 
 parser.add_argument('--sampler', choices=(1, 0), help='if customer sampler?', type=int, default=0)
-parser.add_argument('--sys', choices=(1, 0), help='if synthesis_data?', type=int, default=0)
-parser.add_argument('--sys_ratio', help='ratio of sys data in the whole data', type=float, default=0.5)
-parser.add_argument('--sys_pro_in_0', help='sys_pro_in_0', type=float, default=0.0)  # must be a float number !
+parser.add_argument('--sys', choices=(1, 0), help='if synthesis_data?', type=int, default=1)
+parser.add_argument('--sys_ratio', help='ratio of sys data in the whole data', type=float, default=0.0)
+parser.add_argument('--sys_pro_in_0', help='sys_pro_in_0', type=float, default=0.5)  # must be a float number !
 
 parser.add_argument('--_ori_weight0', help='_ori_weight0, do not set this value', type=float, default=0.0)
 
 parser.add_argument('--valid_period', help='how many epochs between 2 validation', type=int, default=5)
-parser.add_argument('--workers',  help='number of workers for dataloader', type=int, default=2)
+parser.add_argument('--workers',  help='number of workers for dataloader', type=int, default=6)
 parser.add_argument('--ts_level_nb', choices=(235, 240), help='if customer sampler?', type=int, default=240)
 parser.add_argument('--masked_by_lung', choices=(1, 0), help='if slices are masked by lung masks', type=int, default=0)
 
@@ -58,4 +58,7 @@ if (args.mode != 'train') and (args.eval_id == 0):
     parser.error("Please provide valid eval_id if the mode is: " + args.mode)
 if args.mode == "infer":
     args.epochs = 0
+
+if args.mode == "train" and (args.eval_id != 0):
+    raise Exception(f'train mode should not have eval_id {args.eval_id}')
 

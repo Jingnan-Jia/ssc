@@ -3,6 +3,7 @@
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
 import copy
+import glob
 import random
 from multiprocessing import Manager, Lock
 from typing import (Union)
@@ -15,7 +16,8 @@ from torchvision.transforms import CenterCrop, RandomAffine
 import os
 import matplotlib.pyplot as plt
 from statistics import mean
-from monai.transforms import MapTransform
+from monai.transforms import MapTransform, ScaleIntensityRange
+from monai.transforms import RandomizableTransform
 
 manager = Manager()
 train_label_numbers = manager.dict(
@@ -108,7 +110,7 @@ def gen_pts(nb_points: int, limit: int, radius: int) -> np.ndarray:
     return pts
 
 
-class SysthesisNewSampled(MapTransform):
+class SysthesisNewSampled(RandomizableTransform, MapTransform):
     def __init__(self,
                  keys,
                  retp_fpath,
@@ -139,8 +141,12 @@ class SysthesisNewSampled(MapTransform):
         self.gen_gg_as_retp = gen_gg_as_retp
         self.gg_increase = gg_increase
 
-        self.retp_temp = self.generate_candidate(self.retp_fpath)
-        self.gg_temp = self.generate_candidate(self.gg_fpath)
+
+        ret_eggs_fpath = glob.glob(os.path.join(os.path.dirname(self.retp_fpath), 'ret_*from*.mha'))
+        gg_eggs_fpath = glob.glob(os.path.join(os.path.dirname(self.gg_fpath), 'gg_*from*.mha'))
+
+        self.retp_temp = self.generate_candidate(ret_eggs_fpath)
+        self.gg_temp = self.generate_candidate(gg_eggs_fpath)
 
         self.retp_candidate = self.rand_affine_crop(self.retp_temp)
         self.gg_candidate = self.rand_affine_crop(self.gg_temp)
@@ -154,12 +160,15 @@ class SysthesisNewSampled(MapTransform):
         else:
             raise Exception("mode is wrong for synthetic data", self.mode)
 
-    def generate_candidate(self, fpath):
-        ori_image_fpath = fpath.split('.mha')[0] + '_ori.mha'
-        egg = futil.load_itk(fpath)
-        ori = futil.load_itk(ori_image_fpath)
+    def generate_candidate(self, eggs_fpath):
+        # ori_image_fpath = fpath.split('.mha')[0] + '_ori.mha'
+        egg_fpath = random.choice(eggs_fpath)
+        egg = futil.load_itk(egg_fpath)
+        # ori = futil.load_itk(ori_image_fpath)
         # normalize the egg using the original image information
-        egg = (egg - np.min(ori)) / (np.max(ori) - np.min(ori))
+        normalize0to1 = ScaleIntensityRange(a_min=-1500.0, a_max=1500.0, b_min=0.0, b_max=1.0, clip=True)
+        egg = normalize0to1(egg)
+        # egg = (egg - np.min(ori)) / (np.max(ori) - np.min(ori))
 
         minnorv = np.vstack((np.flip(egg), np.flip(egg, 0)))
         minnorh = np.hstack((minnorv, np.flip(minnorv, 1)))

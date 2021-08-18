@@ -5,6 +5,7 @@
 import csv
 import glob
 import os
+import time
 from typing import List, Union, Tuple
 
 import monai
@@ -12,7 +13,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import KFold
 from monai.data import DataLoader
-
+from monai.transforms import Transform
 from ssc_scoring.mymodules.composed_trans import xformd_pos, xformd_score, xformd_pos2score
 from ssc_scoring.mymodules.datasets import SysDataset
 from ssc_scoring.mymodules.tool import sampler_by_disext
@@ -35,9 +36,13 @@ class LoaderInit:
         self.total_folds = total_folds
         self.ts_level_nb = ts_level_nb
         if self.ts_level_nb == 240:
-            self.ts_id = [68, 83, 36, 187, 238, 12, 158, 189, 230, 11, 35, 37, 137, 144, 17, 42, 66, 70, 28, 64, 210, 3, 49,
-                     32, 236, 206, 194, 196, 7, 9, 16, 19, 20, 21, 40, 46, 47, 57, 58, 59, 60, 62, 116, 117, 118, 128,
-                     134, 216]
+            # self.ts_id = [68, 83, 36, 187, 238, 12, 158, 189, 230, 11, 35, 37, 137, 144, 17, 42, 66, 70, 28, 64, 210, 3, 49,
+            #          32, 236, 206, 194, 196, 7, 9, 16, 19, 20, 21, 40, 46, 47, 57, 58, 59, 60, 62, 116, 117, 118, 128,
+            #          134, 216]
+            self.ts_id = [3, 7, 9, 11, 12, 16, 17, 19, 20, 21, 28, 32, 35, 36, 37, 40, 42, 46, 47,
+                           49, 57, 58, 59, 60, 62, 64, 66, 68, 70, 83, 116, 117, 118, 128, 134, 137,
+                           144, 158, 187, 189, 194, 196, 206, 210, 216, 230, 236, 238]
+
         else:
             raise Exception('please use correct testing dataset')
         self.level_node = level_node
@@ -152,36 +157,59 @@ class LoadPos(LoaderInit):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
         for x, y, mode in zip([tr_x, vd_x, ts_x], [tr_y, vd_y, ts_y], ['train', 'valid', 'test']):
             self.save_xy(x, y, mode)
-        # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:6], tr_y[:6], vd_x[:6], vd_y[:6], ts_x[:6], ts_y[:6]
+        # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:2], tr_y[:2], vd_x[:2], vd_y[:2], ts_x[:2], ts_y[:2]
         # print(tr_x)
-        cache_nb = 10 if len(tr_x) < 50 else 50
-
+        cache_nb = len(tr_x) if len(tr_x) < 50 else 50
         tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
         vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]
         ts_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(ts_x, ts_y)]
         tr_dataset = monai.data.SmartCacheDataset(data=tr_data, transform=self.xformd('train'), replace_rate=0.2,
-                                                  cache_num=cache_nb, num_init_workers=4, num_replace_workers=8)
-        vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('train'), num_workers=4,
-                                                cache_rate=1)
-        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid'), num_workers=4,
-                                             cache_rate=1)
-        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=self.xformd('valid'),
-                                                  cache_dir="persistent_cache")
-
+                                                  cache_num=cache_nb, num_init_workers=4, num_replace_workers=6)
+        vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('train'), num_workers=4, cache_rate=1)
+        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid'), num_workers=4, cache_rate=1)
+        ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=self.xformd('valid'), cache_dir="persistent_cache")
+        # self.workers = 0
         train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.workers,
-                                      pin_memory=True, persistent_workers=True)
+                                      pin_memory=False, persistent_workers=True)
         validaug_dataloader = DataLoader(vdaug_dataset, batch_size=self.batch_size, shuffle=False,
                                          num_workers=self.workers,
-                                         pin_memory=True, persistent_workers=True)
+                                         pin_memory=False, persistent_workers=True)
         valid_dataloader = DataLoader(vd_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
-                                      pin_memory=True, persistent_workers=True)
+                                      pin_memory=False, persistent_workers=True)
         test_dataloader = DataLoader(ts_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
-                                     pin_memory=True, persistent_workers=True)
+                                     pin_memory=False, persistent_workers=True)
+
+        # # tr_dataset.start()
+        # for i in range(3):
+        #     t0 = time.time()
+        #     idx = 0
+        #     t_tmp0 = t0
+        #     for tr in valid_dataloader:
+        #         idx +=1
+        #         print('load_t: ', time.time() - t_tmp0)
+        #         t_tmp0 = time.time()
+        #     t_tmp = time.time()
+        #     print('time per batch data for train_dataloader via cache_nb50, cacherate0.2: ', (t_tmp - t0)/idx)
+        # # tr_dataset.shutdown()
+        # print('yes')
+
+
+        #
+        # tr_dataset = monai.data.PersistentDataset(data=tr_data, transform=self.xformd('train'), cache_dir="train_cache")
+        # train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.workers,
+        #                               pin_memory=True, persistent_workers=True)
+        # for i in range(5):
+        #     t0 = time.time()
+        #     idx = 0
+        #     for tr in train_dataloader:
+        #         idx +=1
+        #     t_tmp = time.time()
+        #     print('time per batch data for train_dataloader via cache_nb50, cacherate0.2: ', (t_tmp - t0)/idx)
 
         return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
 
 
-class LoadScore(LoaderInit):
+class LoadScore(LoaderInit, Transform):
     def __init__(self, mypath, label_file, kfold_seed, args):
         super().__init__(resample_z=None, mypath=mypath, label_file=label_file, kfold_seed=kfold_seed,
                          fold=args.fold, total_folds=args.total_folds, ts_level_nb=args.ts_level_nb, level_node=0,
@@ -283,7 +311,7 @@ class LoadScore(LoaderInit):
         return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
 
 
-class LoadPos2Score(LoaderInit):
+class LoadPos2Score(LoaderInit, Transform):
     def load_per_xy(self, dir_pat: str) -> Tuple[str, np.ndarray]:
         data_name = dir_pat
         idx = int(dir_pat.split('Pat_')[-1][:3])
