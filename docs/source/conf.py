@@ -12,6 +12,7 @@
 #
 import os
 import sys
+import glob
 sys.path.insert(0, os.path.abspath('../..'))
 
 
@@ -40,11 +41,11 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 # exclude_patterns = []
+scripts_files = glob.glob("../../ssc_scoring/*.py")
 exclude_patterns = ['../../ssc_scoring/dataset',
                     '../../ssc_scoring/image_samples',
                     '../../ssc_scoring/results',
-                    '../../ssc_scoring/persistent_cache',
-                    '../../ssc_scoring/*.py']
+                    '../../ssc_scoring/persistent_cache'] + scripts_files
 
 # -- Options for HTML output -------------------------------------------------
 
