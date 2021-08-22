@@ -12,26 +12,10 @@ Subpackages
 Submodules
 ----------
 
-ssc\_scoring.mymodules.bland\_altman module
--------------------------------------------
-
-.. automodule:: ssc_scoring.mymodules.bland_altman
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 ssc\_scoring.mymodules.composed\_trans module
 ---------------------------------------------
 
 .. automodule:: ssc_scoring.mymodules.composed_trans
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ssc\_scoring.mymodules.confusion module
----------------------------------------
-
-.. automodule:: ssc_scoring.mymodules.confusion
    :members:
    :undoc-members:
    :show-inheritance:
@@ -64,14 +48,6 @@ ssc\_scoring.mymodules.inference module
 ---------------------------------------
 
 .. automodule:: ssc_scoring.mymodules.inference
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-ssc\_scoring.mymodules.kd\_loss module
---------------------------------------
-
-.. automodule:: ssc_scoring.mymodules.kd_loss
    :members:
    :undoc-members:
    :show-inheritance:

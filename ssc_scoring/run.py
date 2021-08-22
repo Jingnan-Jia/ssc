@@ -21,7 +21,7 @@ sys.path.append("..")
 matplotlib.use('Agg')
 from statistics import mean
 import threading
-from mymodules.set_args import args
+from mymodules.set_args import get_args
 from mymodules.tool import record_1st, record_2nd, record_GPU_info, compute_metrics
 from mymodules.path import PathScoreInit
 from mymodules.path import PathScore as Path
@@ -41,7 +41,7 @@ def GPU_info(outfile):  # need to be in the main file because it will be execute
     return None
 
 
-def start_run(mode, net, dataloader, device, loss_fun, loss_fun_mae, opt, mypath, epoch_idx,
+def start_run(args, mode, net, dataloader, device, loss_fun, loss_fun_mae, opt, mypath, epoch_idx,
               valid_mae_best=None):
 
     if torch.cuda.is_available():
@@ -199,7 +199,7 @@ def get_mae_best(fpath):
     return mae
 
 
-def train(id_: int, log_dict):
+def train(args, id_: int, log_dict):
     mypath = Path(id_)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     net = get_net(args.net, 3, args) if args.r_c == "r" else get_net(args.net, 21, args)
@@ -267,15 +267,15 @@ def train(id_: int, log_dict):
     epochs = args.epochs
 
     for i in range(epochs):  # 20000 epochs
-        start_run('train', net, train_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+        start_run(args, 'train', net, train_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
 
         # run the validation
         if (i % args.valid_period == 0) or (i > epochs * 0.8):
             # with torch.profiler.record_function("valid_validaug_test"):
-            valid_mae_best = start_run('valid', net, valid_dataloader, device, loss_fun, loss_fun_mae, opt,
+            valid_mae_best = start_run(args, 'valid', net, valid_dataloader, device, loss_fun, loss_fun_mae, opt,
                                        mypath, i, valid_mae_best)
-            start_run('validaug', net, validaug_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
-            start_run('test', net, test_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+            start_run(args, 'validaug', net, validaug_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
+            start_run(args, 'test', net, test_dataloader, device, loss_fun, loss_fun_mae, opt, mypath, i)
     print('start save trace')
 
     data_loaders = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader, 'test': test_dataloader}
@@ -286,11 +286,13 @@ def train(id_: int, log_dict):
 
 
 if __name__ == "__main__":
+    args = get_args()
+
     # set some global variables here, like log_dict, device, amp
     LogType = Optional[Union[int, float, str]]  # int includes bool
     LogDict = Dict[str, LogType]
     log_dict: LogDict = {}  # a global dict to store immutable variables saved to log files
 
     id: int = record_1st('score', args)  # write super parameters from set_args.py to record file.
-    log_dict = train(id, log_dict)
+    log_dict = train(args, id, log_dict)
     record_2nd('score', current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.

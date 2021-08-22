@@ -5,35 +5,53 @@
 
 import os
 from typing import Union
+from abc import ABC, abstractmethod
 
-class PathInit:
+__all__ = ["PathPos", "PathScore"]
+
+class PathInit(ABC):
+    """ Set the directory for results. Leave the project name and record file as not implemented.
+     Different sub-Path need to implement the 2 values"""
     def __init__(self):
         self.results_dir: str = 'results'
-        self.project_name = self.set_project_name()
+        self.project_name = self._project_name()
+        self.record_file = os.path.join(self.results_dir, self._record_file())
 
-    def set_project_name(self):
+    @abstractmethod
+    def _project_name(self):
+        raise NotImplementedError
+
+    @abstractmethod
+    def _record_file(self):
         raise NotImplementedError
 
 
 class PathScoreInit(PathInit):
-    def set_project_name(self):
-        return 'score'
-
     def __init__(self):
         super().__init__()
-        self.record_file: str = os.path.join(self.results_dir, 'records_700.csv')
+
+    def _project_name(self):
+        return 'score'
+
+    def _record_file(self):
+        return 'records_700.csv'
 
 
 class PathPosInit(PathInit):
-    def set_project_name(self):
-        return 'pos'
-
     def __init__(self):
         super().__init__()
-        self.record_file: str = os.path.join(self.results_dir, 'records_pos.csv')
+
+    def _project_name(self):
+        return 'pos'
+
+    def _record_file(self):
+        return 'records_pos.csv'
 
 
 class Path(PathInit):
+    """
+    Common path values are initialized.
+    """
     def __init__(self, id: Union[int, str], model_dir: str, check_id_dir: bool=False):
         super().__init__()
 
@@ -74,6 +92,9 @@ class Path(PathInit):
 
 
 class PathPos(Path, PathPosInit):
+    """ Path values for position prediction.
+
+    """
     def __init__(self, id=None, check_id_dir=False) -> None:
         Path.__init__(self, id, 'models_pos', check_id_dir)
         PathPosInit.__init__(self)
@@ -100,6 +121,7 @@ class PathPos(Path, PathPosInit):
         return os.path.join(self.id_dir, mode + '_data.csv')
 
     def dataset_dir(self, resample_z: int) -> str:
+        """ Dataset directory. Different resample size means different dataset directory."""
         if resample_z == 0:  # use original images
             res_dir: str = 'SSc_DeepLearning'
         elif resample_z == 256:
@@ -119,6 +141,7 @@ class PathPos(Path, PathPosInit):
 
 
 class PathScore(Path, PathScoreInit):
+    """ Path values for Goh score prediction."""
     def __init__(self, id=None, check_id_dir=False) -> None:
         Path.__init__(self, id, 'models', check_id_dir)
         PathScoreInit.__init__(self)

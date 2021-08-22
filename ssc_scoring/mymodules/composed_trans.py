@@ -8,13 +8,13 @@ import monai
 
 from ssc_scoring.mymodules.mytrans import RandomAffined, RandomHorizontalFlipd, RandomVerticalFlipd, \
     RandGaussianNoised, LoadDatad, NormImgPosd, AddChanneld, RandomCropPosd,\
-    CenterCropPosd, CropLevelRegiond,CoresPosd, SliceFromCorsePosd, NormNeg1To1d, RescaleToNeg1500Pos1500d
+    CenterCropPosd, RandCropLevelRegiond,CoresPosd, SliceFromCorsePosd, NormNeg1To1d, RescaleToNeg1500Pos1500d
 from monai.transforms import CastToTyped
 
 from ssc_scoring.mymodules.data_synthesis import SysthesisNewSampled
 
 def xformd_score(mode='train', synthesis=False, args=None):
-    """
+    """ Transforms for Goh score  prediction.
     The input image data is from 0 to 1.
     :param mode:
     :return:
@@ -59,8 +59,8 @@ def xformd_score(mode='train', synthesis=False, args=None):
     return transform
 
 
-
 def xformd_pos2score(mode, mypath):
+    """ TODO; None"""
     xforms = [LoadDatad(),
               CoresPosd(corse_fpath=mypath.pred_int(mode), data_fpath=mypath.data(mode)),
               SliceFromCorsePosd(),
@@ -72,6 +72,7 @@ def xformd_pos2score(mode, mypath):
 
 
 def recon_transformd(mode='train'):
+    """ Transforms for reconstruction network. """
     keys = "image_key"  # only transform image
     xforms = [AddChanneld()]
     if mode=='train':
@@ -81,10 +82,21 @@ def recon_transformd(mode='train'):
     return xforms
 
 
-def xformd_pos(mode=None, level_node=0, train_on_level=0, z_size=192, y_size=256, x_size=256):
+def xformd_pos(mode=None, level_node=0, train_on_level=0,
+               z_size=192, y_size=256, x_size=256) -> monai.transforms.Compose():
+    """ Transforms for position prediction.
+
+    :param mode:
+    :param level_node:
+    :param train_on_level:
+    :param z_size:
+    :param y_size:
+    :param x_size:
+    :return:
+    """
     xforms = [LoadDatad()]
     if level_node or train_on_level:
-        xforms.append(CropLevelRegiond(level_node, train_on_level, height=z_size, rand_start=True))
+        xforms.append(RandCropLevelRegiond(level_node, train_on_level, height=z_size, rand_start=True))
     else:
         # pass
         if mode == 'train':

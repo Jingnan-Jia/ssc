@@ -5,6 +5,7 @@
 # log_dict is used to record super parameters and metrics
 
 import sys
+sys.path.append("..")
 
 import csv
 import os
@@ -23,12 +24,10 @@ from mymodules.myloss import get_loss
 from mymodules.networks import get_net_pos, get_net_pos_enc
 from mymodules.path import PathPos
 
-from mymodules.set_args_pos import args
+from mymodules.set_args_pos import get_args
 from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae, compute_metrics
 # from kd_med import kd_loss, PreTrainedEnc, GetEncSConv
 import kd_med
-
-sys.path.append("..")
 
 
 def gpu_info(outfile):  # need to be in the main file because it will be executed by another thread
@@ -38,7 +37,7 @@ def gpu_info(outfile):  # need to be in the main file because it will be execute
     return None
 
 
-def start_run(mode, net, enc_t, dataloader, loss_fun, loss_fun_mae, opt, mypath, epoch_idx,
+def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt, mypath, epoch_idx,
               valid_mae_best=None):
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -60,7 +59,9 @@ def start_run(mode, net, enc_t, dataloader, loss_fun, loss_fun_mae, opt, mypath,
     t0 = time.time()
     t_load_data, t_train_per_step = [], []
     data_idx = 0
-
+    dataloader = dataloader_dt['dl']
+    if mode=='train':
+        dataset = dataloader_dt['ds']
     for data in dataloader:
         # print('data_idx:', data_idx)
         data_idx += 1
@@ -138,7 +139,8 @@ def start_run(mode, net, enc_t, dataloader, loss_fun, loss_fun_mae, opt, mypath,
         if 'gpuname' not in log_dict:
             p1 = threading.Thread(target=gpu_info, args=(args.outfile,))
             p1.start()
-
+    if mode=='train':
+        dataset.update_cache()
     t_load_data, t_train_per_step = mean(t_load_data), mean(t_train_per_step)
     if "t_load_data" not in log_dict:
         log_dict.update({"t_load_data": t_load_data, "t_train_per_step": t_train_per_step})
@@ -187,7 +189,7 @@ def start_run(mode, net, enc_t, dataloader, loss_fun, loss_fun_mae, opt, mypath,
 #     return net
 
 
-def train(id: int, log_dict: dict):
+def train(id: int, log_dict: dict, args):
     mypath = PathPos(id)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     if args.train_on_level or args.level_node:
@@ -222,7 +224,8 @@ def train(id: int, log_dict: dict):
     all_loader = LoadPos(args.resample_z, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb,
                          args.level_node,
                          args.train_on_level, args.z_size, args.y_size, args.x_size, args.batch_size, args.workers)
-    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
+    # train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
+    data_dt = all_loader.load()
 
     net = net.to(device)
     if args.eval_id:
@@ -239,29 +242,34 @@ def train(id: int, log_dict: dict):
     epochs = 0 if args.mode == 'infer' else args.epochs
     for i in range(epochs):  # 20000 epochs
         if args.mode in ['train', 'continue_train']:
-            start_run('train', net, enc_t, train_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
+            start_run(args, 'train', net, enc_t, data_dt['train'], loss_fun, loss_fun_mae, opt, mypath, i)
         if i % args.valid_period == 0:
             # run the validation
-            valid_mae_best = start_run('valid', net, enc_t, valid_dataloader, loss_fun, loss_fun_mae, opt, mypath, i,
+            valid_mae_best = start_run(args, 'valid', net, enc_t, data_dt['valid'], loss_fun, loss_fun_mae, opt, mypath, i,
                                        valid_mae_best)
-            start_run('validaug', net, enc_t, validaug_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
-            start_run('test', net, enc_t, test_dataloader, loss_fun, loss_fun_mae, opt, mypath, i)
+            start_run(args, 'validaug', net, enc_t, data_dt['validaug'], loss_fun, loss_fun_mae, opt, mypath, i)
+            start_run(args, 'test', net, enc_t, data_dt['test'], loss_fun, loss_fun_mae, opt, mypath, i)
 
-    dataloader_dict = {'train': train_dataloader, 'valid': valid_dataloader, 'validaug': validaug_dataloader}
-    dataloader_dict.update({'test': test_dataloader})
+    # dataloader_dict = {'train': train_dataloader,
+    #                    'valid': valid_dataloader,
+    #                    'validaug': validaug_dataloader,
+    #                    'test': test_dataloader}
     if args.kd != 'dist':
-        record_best_preds(net, dataloader_dict, mypath, args)
+        record_best_preds(net, data_dt, mypath, args)
         log_dict = compute_metrics(mypath, PathPos(args.eval_id), log_dict)
+    data_dt['train']['ds'].shutdown()
     print('Finish all things!')
     return log_dict
 
 
 if __name__ == "__main__":
+    args = get_args()
+
     # set some global variables here, like log_dict, device, amp
     LogType = Optional[Union[int, float, str]]  # int includes bool
     LogDict = Dict[str, LogType]
     log_dict: LogDict = {}  # a global dict to store immutable variables saved to log files
 
     id: int = record_1st('pos', args)  # write super parameters from set_args.py to record file.
-    log_dict = train(id, log_dict)
+    log_dict = train(id, log_dict, args)
     record_2nd('pos', current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.

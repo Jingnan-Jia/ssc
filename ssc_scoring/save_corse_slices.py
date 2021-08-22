@@ -28,13 +28,15 @@ from mymodules.networks import get_net_pos
 from mymodules.networks import med3d_resnet as med3d
 from mymodules.path import PathPos, PathPosInit
 
-from mymodules.set_args_pos import args
+from mymodules.set_args_pos import get_args
 from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae, compute_metrics
 import pandas as pd
 
 from monai.transforms import CastToTyped
 
-def train():
+
+
+def train(args):
     for ex_id, fold in zip([193, 194, 276, 277], [1,2,3,4]):
         args.eval_id = ex_id
         args.fold = fold
@@ -69,5 +71,6 @@ def train():
 
 
 if __name__ == "__main__":
+    args = get_args()
 
-    train()
+    train(args)

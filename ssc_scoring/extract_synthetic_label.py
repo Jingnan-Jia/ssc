@@ -80,7 +80,7 @@ def extract_label(file_fpath):
         # ax.hist(score, bins=21)
     plt.title("all")
     plt.show()
-    print('finish')
+    print('finish extracting synthetic labels')
 
 
 

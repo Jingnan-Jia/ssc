@@ -8,7 +8,12 @@ import torch.nn as nn
 
 
 class MSEHigher(nn.Module):
-    """Dice and Xentropy loss"""
+    """This loss aims to penalty more when pred is greater than ground truth. But it would make the training not
+    stable and results is not better from my own experiments.
+
+    .. warning::
+        I am not sure if the implementation is correct. Should if-else condition be in `forward` function.
+    """
 
     def __init__(self):
         super().__init__()
@@ -18,16 +23,16 @@ class MSEHigher(nn.Module):
 
         if torch.sum(y_pred) > torch.sum(y_true):
             loss = self.mse(y_pred, y_true)
-            print('mormal loss')
+            print('normal loss')
         else:
-            loss = self.mse(y_pred, y_true) * 5
+            loss = self.mse(y_pred, y_true) * 5  # 5 could be changed
             print("higher loss")
 
         return loss
 
 
 class MsePlusMae(nn.Module):
-    """Dice and Xentropy loss"""
+    """MSE + MAE"""
 
     def __init__(self):
         super().__init__()
@@ -41,7 +46,12 @@ class MsePlusMae(nn.Module):
         return mse + mae
 
 
-def get_loss(loss):
+def get_loss(loss: str) -> nn.Module:
+    """ Get loss from its name.
+
+    :param loss: The name of loss function
+    :return: The object of loss function
+    """
     if loss == 'mae':
         loss_fun = nn.L1Loss()
     elif loss == 'smooth_mae':
@@ -55,4 +65,3 @@ def get_loss(loss):
     else:
         raise Exception("loss function is not correct " + loss)
     return loss_fun
-

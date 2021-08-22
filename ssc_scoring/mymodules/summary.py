@@ -8,8 +8,9 @@ from collections import OrderedDict
 from typing import (List, Tuple, Optional, Union, Dict, Sequence)
 import numpy as np
 
-
+__all__ = ['summary']
 def summary(model: nn.Module, input_size: Tuple[int, ...], batch_size=-1, device="cpu"):
+    """ Get the parameter size of the model."""
     def register_hook(module):
 
         def hook(module, input, output):

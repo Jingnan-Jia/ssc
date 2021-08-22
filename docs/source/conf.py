@@ -14,6 +14,7 @@ import os
 import sys
 import glob
 sys.path.insert(0, os.path.abspath('../..'))
+sys.path.insert(0, os.path.abspath('../../ssc_scoring'))
 
 
 # -- Project information -----------------------------------------------------
@@ -31,7 +32,13 @@ release = '0.1'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon'
+extensions = ['sphinx.ext.todo', 'sphinx.ext.viewcode', 'sphinx.ext.autodoc', 'sphinx.ext.napoleon',
+              "sphinx.ext.intersphinx",
+              "sphinx.ext.mathjax",
+              "sphinx.ext.napoleon",
+              "sphinx.ext.autodoc",
+              "sphinx.ext.viewcode",
+              "sphinx.ext.autosectionlabel",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -42,20 +49,60 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 # exclude_patterns = []
 scripts_files = glob.glob("../../ssc_scoring/*.py")
-exclude_patterns = ['../../ssc_scoring/dataset',
-                    '../../ssc_scoring/image_samples',
-                    '../../ssc_scoring/results',
-                    '../../ssc_scoring/persistent_cache'] + scripts_files
+scripts_files = [os.path.abspath(f) for f in scripts_files]
+exclude_patterns = ['dataset',
+                    'image_samples',
+                    'results',
+                    'persistent_cache',
+                    '*.mha'] + scripts_files
+print(f'excluded patterns: {exclude_patterns}')
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
-# html_theme = 'sphinx_rtd_theme'
+# html_theme = 'alabaster'
+# html_theme = 'sphinx_rtd_theme'  #  sphinx_rtd_them will not be available since Sphinx-6.0
+# -- Options for HTML output -------------------------------------------------
+
+# The theme to use for HTML and HTML Help pages.  See the documentation for
+# a list of builtin themes.
+#
+html_theme = "pydata_sphinx_theme"
+# html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme_options = {
+    "external_links": [{"url": "https://github.com/Jingnan-Jia/ssc_scoring", "name": "GitHub"}],
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/Jingnan-Jia/ssc_scoring",
+            "icon": "fab fa-github-square",
+        },
+    ],
+    "collapse_navigation": True,
+    "navigation_depth": 3,
+    "show_toc_level": 1,
+    "footer_items": ["copyright"],
+    "navbar_align": "content",
+}
+html_context = {
+    "github_user": "Jingnan Jia",
+    "github_repo": "ssc_scoring",
+    "github_version": "master",
+    "doc_path": "docs/",
+    "conf_py_path": "/docs/",
+}
+html_scaled_image_link = False
+html_show_sourcelink = True
+# html_favicon = "../images/favicon.ico"
+# html_logo = "../images/MONAI-logo-color.png"
+html_sidebars = {"**": ["search-field", "sidebar-nav-bs"]}
+pygments_style = "sphinx"
+
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+autodoc_inherit_docstrings = False

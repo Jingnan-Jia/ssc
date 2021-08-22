@@ -47,24 +47,28 @@ def largest_connected_parts(bw_img: np.ndarray, nb_need_saved=2):
     print(f"all parts are found, prepare write result")
     return bw_img
 
-mypath = Path()
-scan_files = get_all_ct_names(mypath.dataset_dir(resample_z=0), name_suffix="CTimage")
+def main():
+    mypath = Path()
+    scan_files = get_all_ct_names(mypath.dataset_dir(resample_z=0), name_suffix="CTimage")
 
-for scan in scan_files:
+    for scan in scan_files:
 
-    ct, ori, sp = load_itk(scan, require_ori_sp=True)
-    ct[ct > -141] = 1
-    ct[ct < -141] = 0
+        ct, ori, sp = load_itk(scan, require_ori_sp=True)
+        ct[ct > -141] = 1
+        ct[ct < -141] = 0
 
-    conn = morphology.generate_binary_structure(ct.ndim, 3)
-    ct_dia = morphology.binary_dilation(ct, np.ones((3, 3, 3))).astype(int)
-    ct_ero = morphology.binary_erosion(ct_dia, np.ones((3, 3, 3))).astype(int)
-    ct_neg = 1 - ct_ero  # get the opposite numbers of ct
+        conn = morphology.generate_binary_structure(ct.ndim, 3)
+        ct_dia = morphology.binary_dilation(ct, np.ones((3, 3, 3))).astype(int)
+        ct_ero = morphology.binary_erosion(ct_dia, np.ones((3, 3, 3))).astype(int)
+        ct_neg = 1 - ct_ero  # get the opposite numbers of ct
 
-    ct_dia2 = morphology.binary_dilation(ct_neg, np.ones((6, 6, 6))).astype(int)
-    ct_lung = largest_connected_parts(ct_dia2, 2)
-    ct_ero2 = morphology.binary_erosion(ct_lung, np.ones((6, 6, 6))).astype(int)
+        ct_dia2 = morphology.binary_dilation(ct_neg, np.ones((6, 6, 6))).astype(int)
+        ct_lung = largest_connected_parts(ct_dia2, 2)
+        ct_ero2 = morphology.binary_erosion(ct_lung, np.ones((6, 6, 6))).astype(int)
 
-    save_itk(scan.split('.mha')[0] + '_lung.mha', ct_ero2, ori, sp)
-    print('save lung to ', scan.split('.mha')[0] + '_lung.mha')
+        save_itk(scan.split('.mha')[0] + '_lung.mha', ct_ero2, ori, sp)
+        print('save lung to ', scan.split('.mha')[0] + '_lung.mha')
 
+
+if __name__ == "__main__":
+    main()

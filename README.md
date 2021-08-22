@@ -17,3 +17,10 @@
 1. `sbatch script.sh` to submit job to slurm in your server.
 2. `run.py --epochs=300 --mode='train' ... ` more arguments can be found in `set_args.py`.
 
+### Predict Goh scores from 2d CT slices
+#### train and inference
+#### inference
+
+### Predict 5 positions from 3d CT scans
+#### train and inference
+#### inference

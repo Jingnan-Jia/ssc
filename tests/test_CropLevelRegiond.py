@@ -5,7 +5,7 @@
 
 import unittest
 from parameterized import parameterized
-from ssc_scoring.mymodules.mytrans import CropLevelRegiond
+from ssc_scoring.mymodules.mytrans import RandCropLevelRegiond
 import numpy as np
 from tests.utils import Compare
 
@@ -135,13 +135,13 @@ TEST_CASE_3D_5Label_5 = [  # doesnot 'level_key' (Error)
 class TestCropLevelRegiond(unittest.TestCase):
     @parameterized.expand([TEST_CASE_3D_5Label_1, TEST_CASE_3D_5Label_2])
     def test_CropLevelRegiond(self, input_param, input_data, expected_out):
-        result = CropLevelRegiond(**input_param)(input_data)
+        result = RandCropLevelRegiond(**input_param)(input_data)
         self.assertEqual(set(list(result.keys())), set(list(expected_out.keys())))
         Compare().go(result, expected_out)
 
     @parameterized.expand([TEST_CASE_3D_5Label_3, TEST_CASE_3D_5Label_4])
     def test_CropLevelRegiond_shape(self, input_param, input_data, expected_out):
-        result = CropLevelRegiond(**input_param)(input_data)
+        result = RandCropLevelRegiond(**input_param)(input_data)
         self.assertEqual(set(list(result.keys())), set(list(expected_out.keys())))
         for k in result.keys():
             if type(expected_out[k]) is np.ndarray:
@@ -151,7 +151,7 @@ class TestCropLevelRegiond(unittest.TestCase):
 
     @parameterized.expand([TEST_CASE_3D_5Label_4, TEST_CASE_3D_5Label_5])
     def test_CropLevelRegiond_key(self, input_param, input_data, expected_out):
-        result = CropLevelRegiond(**input_param)(input_data)
+        result = RandCropLevelRegiond(**input_param)(input_data)
         self.assertEqual(set(list(result.keys())), set(list(expected_out.keys())))
         self.assertTrue('level_key' in set(list(result.keys())))
 

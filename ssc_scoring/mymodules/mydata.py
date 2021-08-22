@@ -7,6 +7,7 @@ import glob
 import os
 import time
 from typing import List, Union, Tuple
+from abc import ABC, abstractmethod
 
 import monai
 import numpy as np
@@ -19,9 +20,9 @@ from ssc_scoring.mymodules.datasets import SysDataset
 from ssc_scoring.mymodules.tool import sampler_by_disext
 
 
-class LoaderInit:
+class LoaderInit(ABC):
     """
-    load_per_xy(), xformd() and load() need to be implemented.
+    Base class for LoadScore and LoadPos. methods of load_per_xy(), xformd() and load() need to be implemented.
     """
     def __init__(self, resample_z, mypath, label_file, kfold_seed, fold, total_folds, ts_level_nb, level_node,
                  train_on_level, z_size, y_size, x_size, batch_size, workers):
@@ -126,17 +127,21 @@ class LoaderInit:
 
         return tr_x, tr_y, vd_x, vd_y, ts_x, ts_y
 
+    @abstractmethod
     def xformd(self, mode):
         raise NotImplementedError
 
+    @abstractmethod
     def load_per_xy(self, *args, **kargs):
         raise NotImplementedError
 
+    @abstractmethod
     def load(self, *args, **kargs):
         raise NotImplementedError  #
 
 
 class LoadPos(LoaderInit):
+    """ LoadData for Position prediction."""
     def load_per_xy(self, dir_pat: str) -> Tuple[str, np.ndarray]:
         data_name = dir_pat
         idx = int(dir_pat.split('Pat_')[-1][:3])
@@ -146,12 +151,10 @@ class LoadPos(LoaderInit):
             data_label.append(y)
         return data_name, np.array(data_label)
 
-
     def xformd(self, mode):
         return xformd_pos(mode, level_node=self.level_node,
                    train_on_level=self.train_on_level,
                    z_size=self.z_size, y_size = self.y_size, x_size=self.x_size)
-
 
     def load(self):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
@@ -179,7 +182,7 @@ class LoadPos(LoaderInit):
         test_dataloader = DataLoader(ts_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
                                      pin_memory=False, persistent_workers=True)
 
-        # # tr_dataset.start()
+
         # for i in range(3):
         #     t0 = time.time()
         #     idx = 0
@@ -205,11 +208,16 @@ class LoadPos(LoaderInit):
         #         idx +=1
         #     t_tmp = time.time()
         #     print('time per batch data for train_dataloader via cache_nb50, cacherate0.2: ', (t_tmp - t0)/idx)
-
-        return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
+        data_dt = {'train': {'dl': train_dataloader, 'ds': tr_dataset},
+                 'valid': {'dl': valid_dataloader, 'ds': vd_dataset},
+                 'validaug': {'dl': validaug_dataloader, 'ds': vdaug_dataset},
+                 'test': {'dl': test_dataloader, 'ds': ts_dataset}}
+        tr_dataset.start()
+        return data_dt
 
 
 class LoadScore(LoaderInit, Transform):
+    """ LoadData for Goh score prediction."""
     def __init__(self, mypath, label_file, kfold_seed, args):
         super().__init__(resample_z=None, mypath=mypath, label_file=label_file, kfold_seed=kfold_seed,
                          fold=args.fold, total_folds=args.total_folds, ts_level_nb=args.ts_level_nb, level_node=0,
@@ -263,10 +271,8 @@ class LoadScore(LoaderInit, Transform):
 
         return x, y
 
-
     def xformd(self, *arg, **karg):
         return xformd_score(*arg, **karg)
-
 
     def load(self, merge=0):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
@@ -312,6 +318,7 @@ class LoadScore(LoaderInit, Transform):
 
 
 class LoadPos2Score(LoaderInit, Transform):
+    """TODO: None"""
     def load_per_xy(self, dir_pat: str) -> Tuple[str, np.ndarray]:
         data_name = dir_pat
         idx = int(dir_pat.split('Pat_')[-1][:3])

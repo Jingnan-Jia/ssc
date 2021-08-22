@@ -3,7 +3,7 @@
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
 import random
-from typing import Dict, Optional, Union, Hashable, Mapping
+from typing import Dict, Optional, Union, Hashable, Mapping, Sequence
 import pandas as pd
 import torch
 import myutil.myutil as futil
@@ -14,31 +14,52 @@ from monai.transforms import ScaleIntensityRange, RandGaussianNoise, MapTransfor
 from torchvision.transforms import RandomHorizontalFlip, RandomVerticalFlip, CenterCrop, RandomAffine
 import matplotlib.pyplot as plt
 import os
+
 TransInOut = Mapping[Hashable, Optional[Union[np.ndarray, str]]]
 
+
 class RescaleToNeg1500Pos1500d(Transform):
-    def __init__(self):
+    """ Rescale voxel values to [-1, 1], then to [-1500, 1500].
+
+    """
+
+    def __init__(self, key='image_key'):
         self.norm = NormNeg1To1d()
+        self.key = key
 
     def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
         data = self.norm(data)
-
-        data['image_key'] =  data['image_key'] * 1500
+        data[self.key] = data[self.key] * 1500
         return data
 
 
 class NormNeg1To1d(Transform):
-    def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
-        if isinstance(data['image_key'], torch.Tensor):
-            min_value, max_value = torch.min(data['image_key']), torch.max(data['image_key'])
-        else:
-            min_value, max_value = np.min(data['image_key']), np.max(data['image_key'])
+    """ Rescale voxel values to [-1, 1]."""
 
-        data['image_key'] = ((data['image_key'] - min_value)/(max_value - min_value) - 0.5) * 2
+    def __init__(self, key='image_key'):
+        self.key = key
+
+    def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
+        if isinstance(data[self.key], torch.Tensor):
+            min_value, max_value = torch.min(data[self.key]), torch.max(data[self.key])
+        else:
+            min_value, max_value = np.min(data[self.key]), np.max(data[self.key])
+
+        data[self.key] = ((data[self.key] - min_value) / (max_value - min_value) - 0.5) * 2
         return data
 
 
 class LoadDatad(Transform):
+    """ Load data.
+
+        #. Load data from `data['fpath_key']`;
+        #. truncate data image to [-1500, 1500];
+        #. Get origin, spacing;
+        #. Calculate relative slice number;
+        #. Build a data dict.
+
+    """
+
     def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
         fpath = data['fpath_key']
         world_pos = np.array(data['world_key']).astype(np.float32)
@@ -71,48 +92,68 @@ class LoadDatad(Transform):
 
 
 class AddChanneld(Transform):
+    """ Add a channel to the first dimension."""
+
+    def __init__(self, key='image_key'):
+        self.key = key
+
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         """
         Apply the transform to `img`.
         """
         d = dict(data)
-        for key in d.keys():
-            if key == 'image_key':
-                d[key] = d[key][None]
+        d[self.key] = d[self.key][None]
         return d
 
 
 class NormImgPosd(Transform):
+    """ Normalize image to standard Normalization distribution"""
+
+    def __init__(self, key='image_key'):
+        self.key = key
+
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         d = dict(data)
 
-        if isinstance(d['image_key'], torch.Tensor):
-            mean, std = torch.mean(d['image_key']), torch.std(d['image_key'])
+        if isinstance(d[self.key], torch.Tensor):
+            mean, std = torch.mean(d[self.key]), torch.std(d[self.key])
         else:
-            mean, std = np.mean(d['image_key']), np.std(d['image_key'])
+            mean, std = np.mean(d[self.key]), np.std(d[self.key])
 
-        d['image_key'] = d['image_key'] - mean
-        d['image_key'] = d['image_key'] / std
+        d[self.key] = d[self.key] - mean
+        d[self.key] = d[self.key] / std
         # print('end norm')
 
         return d
 
 
 class RandGaussianNoised(RandomizableTransform):
-    def __init__(self, *args, **kargs):
+    """ Add noise to data[key]"""
+
+    def __init__(self, key='image_key', **kargs):
         super().__init__()
-        self.noise = RandGaussianNoise(*args, **kargs)
+        self.noise = RandGaussianNoise(**kargs)
+        self.key = key
 
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         d = dict(data)
-        print('start add noise')
-        d['image_key'] = self.noise(d['image_key'])
+        d[self.key] = self.noise(d[self.key])
         return d
 
 
-def shiftd(d, start, z_size, y_size, x_size):
-    d['image_key'] = d['image_key'][start[0]:start[0] + z_size, start[1]:start[1] + y_size,
-                     start[2]:start[2] + x_size]
+def cropd(d: Dict, start: Sequence[int], z_size: int, y_size: int, x_size: int, key: str = 'image_key') -> Dict:
+    """ Crop 3D image
+
+    :param d: data dict, including an 3D image
+    :param key: image key to be croppeed
+    :param start: start coordinate values, ordered by [z, y, x]
+    :param z_size: sub-image size along z
+    :param y_size: sub-image size along y
+    :param x_size: sub-image size along x
+    :return: data dict, including cropped sub-image, along with updated `label_in_patch_key`
+    """
+    d[key] = d[key][start[0]:start[0] + z_size, start[1]:start[1] + y_size,
+             start[2]:start[2] + x_size]
     d['label_in_patch_key'] = d['label_in_img_key'] - start[0]  # image is shifted up, and relative position down
 
     d['label_in_patch_key'][d['label_in_patch_key'] < 0] = 0  # position outside the edge would be set as edge
@@ -121,17 +162,20 @@ def shiftd(d, start, z_size, y_size, x_size):
     return d
 
 
-class CenterCropPosd(RandomizableTransform):
-    def __init__(self, z_size, y_size, x_size):
+class CenterCropPosd(Transform):
+    """ Crop image at the center point."""
+
+    def __init__(self, z_size, y_size, x_size, key='image_key'):
         self.x_size = x_size
         self.y_size = y_size
         self.z_size = z_size
+        self.key = key
 
     def __call__(self, data: TransInOut) -> TransInOut:
         d = dict(data)
         keys = set(d.keys())
-        assert {'image_key', 'label_in_img_key', 'label_in_patch_key'}.issubset(keys)
-        img_shape = d['image_key'].shape
+        assert {self.keys, 'label_in_img_key', 'label_in_patch_key'}.issubset(keys)
+        img_shape = d[self.keys].shape
         # print(f'img_shape: {img_shape}')
         assert img_shape[0] >= self.z_size
         assert img_shape[1] >= self.y_size
@@ -139,38 +183,44 @@ class CenterCropPosd(RandomizableTransform):
         middle_point = [shape // 2 for shape in img_shape]
         start = [middle_point[0] - self.z_size // 2, middle_point[1] - self.y_size // 2,
                  middle_point[2] - self.y_size // 2]
-        d = shiftd(d, start, self.z_size, self.y_size, self.x_size)
+        d = cropd(d, start, self.z_size, self.y_size, self.x_size)
 
         return d
 
 
 class RandomCropPosd(RandomizableTransform):
-    def __init__(self, z_size, y_size, x_size):
+    """ Random crop a patch from a 3D image, and update the labels"""
+
+    def __init__(self, z_size, y_size, x_size, key='image_key'):
         self.x_size = x_size
         self.y_size = y_size
         self.z_size = z_size
+        self.key = key
+        super().__init__()
 
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Dict[Hashable, np.ndarray]:
         d = dict(data)
         # if 'image_key' in data:
-        img_shape = d['image_key'].shape  # shape order: z,y x
+        img_shape = d[self.key].shape  # shape order: z,y x
         assert img_shape[0] >= self.z_size
         assert img_shape[1] >= self.y_size
         assert img_shape[2] >= self.x_size
 
         valid_range = (img_shape[0] - self.z_size, img_shape[1] - self.y_size, img_shape[2] - self.x_size)
         start = [random.randint(0, v_range) for v_range in valid_range]
-        d = shiftd(d, start, self.z_size, self.y_size, self.x_size)
+        d = cropd(d, start, self.z_size, self.y_size, self.x_size, self.key)
         return d
 
 
-class CropLevelRegiond(Transform):
-    """
+class RandCropLevelRegiond(RandomizableTransform):
+    """ Crop a 3D patch which include one specified level (the position of 5 levels are given).
+    If start is not given, use random start pointt; else use the given start coordinate values.
     Only keep the label of the current level: label_in_img.shape=(1,), label_in_patch.shape=(1,)
     and add a level_key to data dick.
     """
 
-    def __init__(self, level_node: int, train_on_level: int, height: int, rand_start: bool, start: Optional[int] = None):
+    def __init__(self, level_node: int, train_on_level: int, height: int, rand_start: bool,
+                 start: Optional[int] = None, key='image_key'):
         """
 
         :param level: int
@@ -182,23 +232,26 @@ class CropLevelRegiond(Transform):
         self.height = height
         self.rand_start = rand_start
         self.start = start
+        self.key = key
+        super().__init__()
 
     def __call__(self, data: Mapping[Hashable, np.ndarray]) -> Mapping[Hashable, np.ndarray]:
         d = dict(data)
 
-        if self.height > d['image_key'].shape[0]:
+        if self.height > d[self.key].shape[0]:
             raise Exception(
                 f"desired height {self.height} is greater than image size along z {d['image_key'].shape[0]}")
 
         if self.train_on_level != 0:
             self.level = self.train_on_level  # only input data from this level
         else:
-            if self.level_node!=0:
+            if self.level_node != 0:
                 self.level = random.randint(1, 5)  # 1,2,3,4,5 level is randomly selected
             else:
-                raise Exception("Do not need CropLevelRegiond because level_node==0 and train_on_level==0")
+                raise Exception("Do not need RandCropLevelRegiond because level_node==0 and train_on_level==0")
 
-        d['label_in_img_key'] = np.array(d['ori_label_in_img_key'][self.level - 1]).reshape(-1, )  # keep the current label for the current level
+        d['label_in_img_key'] = np.array(d['ori_label_in_img_key'][self.level - 1]).reshape(
+            -1, )  # keep the current label for the current level
         label: int = d['label_in_img_key']  # z slice number
         lower: int = max(0, label - self.height)
         if self.rand_start:
@@ -211,10 +264,10 @@ class CropLevelRegiond(Transform):
                 raise Exception(f"start position {start} is higher than the label line {label}")
 
         end = int(start + self.height)
-        if end > d['image_key'].shape[0]:
-            end = d['image_key'].shape[0]
+        if end > d[self.key].shape[0]:
+            end = d[self.key].shape[0]
             start = end - self.height
-        d['image_key'] = d['image_key'][start: end].astype(np.float32)
+        d[self.key] = d[self.key][start: end].astype(np.float32)
 
         d['label_in_patch_key'] = d['label_in_img_key'] - start
 
@@ -224,7 +277,7 @@ class CropLevelRegiond(Transform):
         return d
 
 
-class CropCorseRegiond(Transform):
+class CropCorseRegiond(RandomizableTransform):
     """
     Only keep the label of the current level: label_in_img.shape=(1,), label_in_patch.shape=(1,)
     and add a level_key to data dick.
@@ -255,14 +308,14 @@ class CropCorseRegiond(Transform):
         self.pred_world_fpath = pred_world_fpath
         self.df_data = pd.read_csv(self.data_fpath, delimiter=',')
         self.df_pred_world = pd.read_csv(self.pred_world_fpath, delimiter=',')
-        if len(self.df_pred_world)==(len(self.df_data)+1):  # df_data should not have header
+        if len(self.df_pred_world) == (len(self.df_data) + 1):  # df_data should not have header
             self.df_data = pd.read_csv(self.data_fpath, header=None, delimiter=',')
             self.df_data.columns = ['img_fpath', 'world_pos']
-        elif len(self.df_pred_world)==len(self.df_data):
+        elif len(self.df_pred_world) == len(self.df_data):
             pass
         else:
-            raise Exception(f"the length of data: {len(self.df_data)} and pred_world: {len(self.df_pred_world)} is not the same")
-
+            raise Exception(
+                f"the length of data: {len(self.df_data)} and pred_world: {len(self.df_pred_world)} is not the same")
 
     def get_img_idx(self, image_fpath: str) -> int:
         id_str = image_fpath.split("Pat_")[-1].split("_")[0]  # like: Pat_012
@@ -291,10 +344,10 @@ class CropCorseRegiond(Transform):
         if self.train_on_level != 0:
             self.level = self.train_on_level  # only input data from this level
         else:
-            if self.level_node!=0:
+            if self.level_node != 0:
                 self.level = random.randint(1, 5)  # 1,2,3,4,5 level is randomly selected
             else:
-                raise Exception("Do not need CropLevelRegiond because level_node==0 and train_on_level==0")
+                raise Exception("Do not need RandCropLevelRegiond because level_node==0 and train_on_level==0")
         # keep the current label for the current level
         d['corse_pred_in_img_1_key'] = np.array(d['corse_pred_in_img_key'][self.level - 1]).reshape(-1, )
         label: int = d['corse_pred_in_img_1_key']  # z slice number
@@ -320,6 +373,7 @@ class CropCorseRegiond(Transform):
         d['level_key'] = np.array(self.level).reshape(-1, )
 
         return d
+
 
 #
 # class CropCorseRegiond:
@@ -417,7 +471,6 @@ class CropCorseRegiond(Transform):
 #
 
 
-
 class RandomAffined(RandomizableTransform):
     def __init__(self, keys, *args, **kwargs):
         super().__init__(keys)
@@ -434,6 +487,7 @@ class CenterCropd(Transform):
     def __init__(self, keys, *args, **kargs):
         super().__init__(keys)
         self.center_crop = CenterCrop(*args, **kargs)
+
     def __call__(self, data):
         d = dict(data)
         for key in self.keys:
@@ -445,7 +499,6 @@ class RandomHorizontalFlipd(RandomizableTransform):
     def __init__(self, keys, *args, **kargs):
         super().__init__(keys)
         self.random_hflip = RandomHorizontalFlip(*args, **kargs)
-
 
     def __call__(self, data):
         d = dict(data)
@@ -464,7 +517,6 @@ class RandomVerticalFlipd(RandomizableTransform):
         for key in self.keys:
             d[key] = self.random_vflip(d[key])
         return d
-
 
 
 class Clip:
@@ -493,6 +545,7 @@ class Clipd(Transform):
             d[key] = self.clip(d[key])
         return d
 
+
 class CascadedSlices:
     """
     0. get 2D images with their "real labels" from excel
@@ -502,6 +555,7 @@ class CascadedSlices:
     3. Get 5 slices by 1 and 2
     4. output 5 slices from 3 and their "real labels" from 1
     """
+
     def __call__(self, *args, **kwargs):
         return None
 
@@ -541,8 +595,9 @@ class CoresPosd(Transform):
               data['corse_pred_int_key'][1],
               data['corse_pred_int_key'][2],
               data['corse_pred_int_key'][3],
-              data['corse_pred_int_key'][4] )
+              data['corse_pred_int_key'][4])
         return data
+
 
 class SliceFromCorsePosd(Transform):
     def __call__(self, d: dict):
@@ -554,8 +609,8 @@ class SliceFromCorsePosd(Transform):
         save_pat_dir = 'Pat_' + pat_id
         for i, slice in enumerate([j for j in d['corse_pred_int_key']]):
             img_2d_ls.append(img_3d[slice])
-            img_2d_name_ls.append(os.path.join(save_pat_dir, 'Level'+str(i+1)+'_middle.mha'))
-            img_2d_ls.append(img_3d[slice+1])
+            img_2d_name_ls.append(os.path.join(save_pat_dir, 'Level' + str(i + 1) + '_middle.mha'))
+            img_2d_ls.append(img_3d[slice + 1])
             img_2d_name_ls.append(os.path.join(save_pat_dir, 'Level' + str(i + 1) + '_up.mha'))
             img_2d_ls.append(img_3d[slice - 1])
             img_2d_name_ls.append(os.path.join(save_pat_dir, 'Level' + str(i + 1) + '_down.mha'))

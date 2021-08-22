@@ -10,8 +10,10 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from typing import (List, Tuple, Optional, Union, Dict, Sequence)
+import sys
+print(f'path3: {list(sys.path)}')
 
-from ssc_scoring.mymodules.mytrans import LoadDatad, NormImgPosd, CropLevelRegiond, CropCorseRegiond
+from ssc_scoring.mymodules.mytrans import LoadDatad, NormImgPosd, RandCropLevelRegiond, CropCorseRegiond
 from ssc_scoring.mymodules.path import PathPos as Path
 from ssc_scoring.mymodules.path import PathInit
 
@@ -58,11 +60,11 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid'
                                         data_fpath=mypath2.data(mode),
                                         pred_world_fpath=mypath2.pred_world(mode))
             else:
-                crop = CropLevelRegiond(level_node=args.level_node,
-                                        train_on_level=args.train_on_level,
-                                        height=args.z_size,
-                                        rand_start=False,
-                                        start=start)
+                crop = RandCropLevelRegiond(level_node=args.level_node,
+                                            train_on_level=args.train_on_level,
+                                            height=args.z_size,
+                                            rand_start=False,
+                                            start=start)
             new_data = crop(data)
             new_patch, new_label = new_data['image_key'], new_data['label_in_patch_key']
             # patch: np.ndarray = raw_x[start:start + z_size]  # z, y, z
@@ -247,9 +249,10 @@ class Evaluater_score():
             record_preds(self.mode, batch_y, pred, self.mypath)
 
 
-def record_best_preds(net: torch.nn.Module, dataloader_dict: Dict[str, DataLoader], mypath: PathInit, args):
+def record_best_preds(net: torch.nn.Module, data_dict: Dict[str, DataLoader], mypath: PathInit, args):
     net.load_state_dict(torch.load(mypath.model_fpath))  # load the best weights to do evaluation
-    for mode, dataloader in dataloader_dict.items():
+    for mode, data in data_dict.items():
+        dataloader = data['dl']
         if mypath.project_name=='score':
             evaluater = Evaluater_score(net, dataloader, mode, mypath, args)
         else:

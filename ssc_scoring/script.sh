@@ -12,7 +12,7 @@
 
 eval "$(conda shell.bash hook)"
 
-conda activate py37
+conda activate py38
 
 job_id=$SLURM_JOB_ID
 slurm_dir=results/slurmlogs
