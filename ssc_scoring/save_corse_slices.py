@@ -31,13 +31,29 @@ from mymodules.path import PathPos, PathPosInit
 from mymodules.set_args_pos import get_args
 from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae, compute_metrics
 import pandas as pd
-
 from monai.transforms import CastToTyped
 
 
+def save_corse_slice(args, ex_dt):
+    """Save corse slices according to the predicted slice numbers from 4-fold experiments.
+    Detailed steps are:
 
-def train(args):
-    for ex_id, fold in zip([193, 194, 276, 277], [1,2,3,4]):
+    #. Get the dataloader in which the 2D slices have already been obtained.
+    #. Save slices from the dataloader.
+
+    :param args: args instance
+    :param ex_dt: a dict with keys of [1,2,3,4] respresenting 4 folds and values of ID of 4 different experiments.
+    :return: None. Reults are saved to disk.
+
+    Example:
+
+    >>> args = get_args()
+    >>> ex_dt = {1: 193, 2: 194, 3: 276, 4: 277}
+    >>> save_corse_slice(args, ex_dt)
+
+    One of the use case is todo: a use case as tutorial.
+    """
+    for fold, ex_id in ex_dt.items():
         args.eval_id = ex_id
         args.fold = fold
         mypath = PathPos(args.eval_id)
@@ -72,5 +88,9 @@ def train(args):
 
 if __name__ == "__main__":
     args = get_args()
+    ex_dt = {1: 193,
+             2: 194,
+             3: 276,
+             4: 277}
 
-    train(args)
+    save_corse_slice(args, ex_dt)

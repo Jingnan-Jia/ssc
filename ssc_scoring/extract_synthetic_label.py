@@ -6,7 +6,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def extract_label(file_fpath):
+def extract_label(file_fpath: str) -> None:
+    """Extract the label distribution of synthetic data fromm `file_fpath` which is usually the log file of a script.
+
+    .. warning::
+
+        This function must be run via pycharm. Because the figures are shown only, not saved to disk.
+
+    :param file_fpath: full path of the file
+    :return: None. The label distribution will be shown via figure.
+
+    Example:
+
+    >>> path = "results/slurmlogs/slurm-96342_0.out"
+    >>> extract_label(file_fpath = path)
+
+    """
     score_disext, score_gg, score_retp = [], [], []
     score_disext_ori, score_gg_ori, score_retp_ori = [], [], []
 

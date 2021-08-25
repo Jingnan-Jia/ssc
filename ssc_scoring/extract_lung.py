@@ -3,6 +3,8 @@
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
 # Extract the lungs using morphological operations and save them to same directory with the original files
+from typing import Sequence
+
 from myutil.myutil import get_all_ct_names, load_itk, save_itk
 from scipy.ndimage import morphology
 import numpy as np
@@ -12,8 +14,8 @@ from mymodules.path import PathScore as Path
 
 
 def largest_connected_parts(bw_img: np.ndarray, nb_need_saved=2):
-    bw_img[:10] = 0  # exclude the noise at the edges
-    bw_img[-10:] = 0
+    bw_img[:10] = 0  # exclude the noise at the bottom
+    bw_img[-10:] = 0  # exclude the noise at the top
 
     t0 = time.time()
     labeled_img, num = label(bw_img, connectivity=1, background=0, return_num=True)
@@ -47,17 +49,32 @@ def largest_connected_parts(bw_img: np.ndarray, nb_need_saved=2):
     print(f"all parts are found, prepare write result")
     return bw_img
 
-def main():
-    mypath = Path()
-    scan_files = get_all_ct_names(mypath.dataset_dir(resample_z=0), name_suffix="CTimage")
 
+def extract(scan_files: Sequence) -> None:
+    """Extract the lung area of a sequence of lung CT files. Steps are:
+
+    #. Binary threshold.
+    #. Dilation + erosion
+    #. Invert Color
+    #. Dilation + Largest_connected_parts + erosion
+    #. Save image
+
+    :param scan_files: file full paths of CT images.
+
+    Example:
+
+    >>> mypath = Path()
+    >>> scan_files = get_all_ct_names(mypath.dataset_dir(resample_z=0), name_suffix="CTimage")
+    >>> extract(scan_files)
+
+
+    """
     for scan in scan_files:
 
         ct, ori, sp = load_itk(scan, require_ori_sp=True)
-        ct[ct > -141] = 1
+        ct[ct > -141] = 1  # 141 is a value selected after I tried several times
         ct[ct < -141] = 0
 
-        conn = morphology.generate_binary_structure(ct.ndim, 3)
         ct_dia = morphology.binary_dilation(ct, np.ones((3, 3, 3))).astype(int)
         ct_ero = morphology.binary_erosion(ct_dia, np.ones((3, 3, 3))).astype(int)
         ct_neg = 1 - ct_ero  # get the opposite numbers of ct
@@ -71,4 +88,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    mypath = Path()
+    scan_files = get_all_ct_names(mypath.dataset_dir(resample_z=0), name_suffix="CTimage")
+
+    extract(scan_files)

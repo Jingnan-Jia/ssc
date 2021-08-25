@@ -11,7 +11,6 @@ import torch
 from torch.utils.data import DataLoader
 from typing import (List, Tuple, Optional, Union, Dict, Sequence)
 import sys
-print(f'path3: {list(sys.path)}')
 
 from ssc_scoring.mymodules.mytrans import LoadDatad, NormImgPosd, RandCropLevelRegiond, CropCorseRegiond
 from ssc_scoring.mymodules.path import PathPos as Path

@@ -13,6 +13,7 @@ from myutil.myutil import get_all_ct_names, load_itk, save_itk
 import matplotlib.pyplot as plt
 import csv
 
+
 def clip(x_np, min, max):
     x_np[x_np > max] = max
     x_np[x_np < min] = min

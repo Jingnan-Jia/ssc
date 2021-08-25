@@ -83,3 +83,6 @@ def get_args():
         raise Exception("0 x_size or y_size: ")
     # if args.kd_net is not None and args.loss:
     return args
+
+if __name__ == "__main__":
+    get_args()

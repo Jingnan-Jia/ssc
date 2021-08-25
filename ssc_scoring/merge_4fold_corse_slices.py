@@ -9,8 +9,18 @@ import glob
 import shutil
 from mymodules.path import PathPos
 
-def main():
-    ex_ls = [193, 194, 276, 277]
+def merge_corse_slices(ex_ls) -> None:
+    """Merge/copy the predicted slices from 4 folds into the same directory.
+
+    :param ex_ls:
+    :return:
+
+    Example:
+
+    >>> ex_ls = [193, 194, 276, 277]
+    >>> merge_corse_slices(ex_ls)
+
+    """
     all_dir = '/data/jjia/ssc_scoring/ssc_scoring/results/models_pos/' + '_'.join([str(i) for i in ex_ls]) + '/predicted_slices'
     if not os.path.isdir(all_dir):
         os.makedirs(all_dir)
@@ -48,4 +58,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    ex_ls = [193, 194, 276, 277]
+
+    merge_corse_slices(ex_ls)

@@ -54,8 +54,16 @@ def create_mpl_ax(ax=None):
     return fig, ax
 
 
-def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
-                   mean_line_kwds=None, limit_lines_kwds=None, x_is_label=True,bland_in_1_mean_std=None, adap_markersize=1, ynotdiff=False):
+def mean_diff_plot(m1, m2,
+                   sd_limit=1.96,
+                   ax=None,
+                   scatter_kwds=None,
+                   mean_line_kwds=None,
+                   limit_lines_kwds=None,
+                   x_is_label=True,
+                   bland_in_1_mean_std=None,
+                   adap_markersize=1,
+                   ynotdiff=False):
     """
     Construct a Tukey/Bland-Altman Mean Difference Plot.
 
@@ -125,7 +133,6 @@ def mean_diff_plot(m1, m2, sd_limit=1.96, ax=None, scatter_kwds=None,
     >>> sm.graphics.mean_diff_plot(m1, m2, ax = ax)
     >>> plt.show()
 
-    .. plot:: plots/graphics-mean_diff_plot.py
     """
     # fontsize = 20
     fig, ax = create_mpl_ax(ax)

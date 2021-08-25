@@ -1,42 +1,63 @@
 # Collect the 16 patients' results from 4-folds' validation
 # results and test results from 1st fold for convenience.
 
-import pandas as pd
-import os
 import csv
+import os
+from typing import Dict, List
+
+import pandas as pd
+
 from mymodules.path import PathScore as Path
 
-def main():
-    id_16_pats = ["026", "028", "029", "049", '066', "070", "077", "140",
-                  "170", "179", "203", "209", "210", "227", "238", "263"]
+
+def data_fpath(ex_id_dict: Dict[int, int], pat_id_dict: Dict[int, List[str]]) -> Dict[str, str]:
+    """Get path of valid_pred_end5 for each experiment and the patient IDs included in the validation dataset of
+    this experiment (which can be used to extract the prediction of these specific patients).
+
+    :param ex_id_dict: key is fold number, value is experiment id.
+    :param pat_id_dict: key is fold numbr, value is patient id as string type.
+    :return: key is path string, , value is patient id as string type.
+    """
+    test_path = Path(ex_id_dict[1]).pred_end5('test')
+    path_dict = {test_path: ['028', '049', '066', '070', '210', '238']}
+    for fold, ex_id in ex_id_dict.items():
+        valid_path = Path(ex_id).pred_end5('valid')
+        path = {valid_path: pat_id_dict[fold]}
+        path_dict.update(path)
+
+    return path_dict
+
+
+def collect(ex_id_dict) -> None:
+    """Collect validation/testing results of 16 patients.
+     10 patients are from the validation results of 4 folds from 4 different experiments, 6 patients are from testing
+     dataset.
+
+     The ID of 16 patients are the same as those scored twice by human observers. The goal of this function is
+     to get a comparison between AI models and human observers.
+
+    :param ex_id_dict: key is fold, value is experiment ID.
+    :return: None. The results will be saved to disk.
+
+    Example:
+
+    >>> ex_id_dict = {1: 1405, 2: 1404, 3: 1411, 4: 1410}
+    >>> collect(ex_id_dict)
+
+    """
 
     # ex_1044_fold1: valid:179, 227, 263, test: 28, 49, 66, 70, 210, 238
     # ex_1043_fold2: valid:140,
     # ex_1045_fold3: valid:203, 209,
     # ex_1046_fold4: valid:26, 29, 77, 170
-    ex_id_dict = {1: 1405,
-                  2: 1404,
-                  3: 1411,
-                  4: 1410}
 
     pat_id_dict = {1: ['179', '227', '263'],
                    2: ['140'],
                    3: ['026', '029', '077', '170'],
                    4: ['203', '209']}
+    # 10 patients are in the validation datasets of 4 folds, other 6 patients are in common testing dataset.
 
-
-    def data_fpath(ex_id_dict):
-        test_path = Path(ex_id_dict[1]).pred_end5('test')
-        path_dict = {test_path: ['028', '049', '066', '070', '210', '238']}
-        for fold, ex_id in ex_id_dict.items():
-            valid_path = Path(ex_id).pred_end5('valid')
-            path = {valid_path: pat_id_dict[fold]}
-            path_dict.update(path)
-
-        return path_dict
-
-
-    pred_fpath_dt: dict = data_fpath(ex_id_dict)  # len = 5, test, 1,2,3,4 fold
+    pred_fpath_dt: dict = data_fpath(ex_id_dict, pat_id_dict)  # len = 5, test, 1,2,3,4 fold
     id_ls_, pred_ls_ = [], []
     for level in [1, 2, 3, 4, 5]:
         pred_dt = {}
@@ -75,13 +96,14 @@ def main():
         id_ls_.extend(id_ls)
         pred_ls_.extend(pred_ls)
 
-    if not os.path.isfile(str(ex_id_dict[1]) + '_16pats_pred.csv'):
-        with open(str(ex_id_dict[1]) + '_16pats_pred.csv', 'w') as csv_file:
+    saved_path = str(ex_id_dict[1]) + '_16pats_pred.csv'
+    if not os.path.isfile(saved_path):  # write head
+        with open(saved_path, 'w') as csv_file:
             writer = csv.writer(csv_file, delimiter=',')
             head = ['disext', 'gg', 'retp']
             writer.writerow(head)
 
-    with open(str(ex_id_dict[1]) + '_16pats_pred.csv', 'a') as f:
+    with open(saved_path, 'a') as f:
         csvwriter = csv.writer(f)
         for pred, id in zip(pred_ls_, id_ls_):
             row = [id]
@@ -93,6 +115,13 @@ def main():
         for pred in id_ls_:
             csvwriter.writerow([pred])
 
+    print(f"The collected results are saved at {saved_path}")
+
 
 if __name__ == "__main__":
-    main()
+    # different fold corresponds to different experiment.
+    ex_id_dict = {1: 1405,
+                  2: 1404,
+                  3: 1411,
+                  4: 1410}
+    collect(ex_id_dict)
