@@ -60,6 +60,8 @@ Tune hyper-parameters
 Common in `run` and `run_pos`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The following arguments are from :mod:`ssc_scoring.mymodules.set_args` and :mod:`ssc_scoring.mymodules.set_args_pos`.
+
 #. `--mode`
 
     Mode includes 'train', 'infer', 'continue_train', 'transfer_learning'.
@@ -207,8 +209,10 @@ Common in `run` and `run_pos`
 
 
 
-Exclusive in `run` (or :mod:`ssc_scoring.mymodules.set_args`)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Exclusive in `run`
+~~~~~~~~~~~~~~~~~~~~
+
+The following arguments are from :mod:`ssc_scoring.mymodules.set_args`
 
 #. `--level`
 
@@ -300,8 +304,10 @@ Exclusive in `run` (or :mod:`ssc_scoring.mymodules.set_args`)
 
 
 
-Exclusive in `run_pos` (or :mod:`ssc_scoring.mymodules.set_args_pos`)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Exclusive in `run_pos`
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The following arguments are from :mod:`ssc_scoring.mymodules.set_args_pos`.
 
 #. `--train_on_level`, `--level_node`
 

@@ -11,6 +11,12 @@ Introduction
 
 .. toctree::
    :maxdepth: 1
+   :caption: Experiment summary:
+
+   experiment_summary
+
+.. toctree::
+   :maxdepth: 1
    :caption: API:
 
    modules

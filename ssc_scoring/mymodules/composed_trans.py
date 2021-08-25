@@ -64,7 +64,7 @@ def xformd_score(mode: str = 'train', synthesis: bool = False, args: Namespace =
 
     # xforms.append(NormImgPosd())
     # xforms.append(NormNeg1To1d())
-    xforms.append(RescaleToNeg1500Pos1500d())
+    # xforms.append(RescaleToNeg1500Pos1500d())
 
     transform = transforms.Compose(xforms)
 
@@ -135,6 +135,7 @@ def xformd_pos(mode: str = 'train', level_node: int = 0, train_on_level: int = 0
     #. Add batch channel.
 
     .. note::
+
         The position prediction results from networks based on 256, 256, 256 patches may be more accurate if we have
         another network to refine these results. I hope using high-resolution patches can lead to better results. But
         if we still use the field of view which includes 5 levels, the patch size would be bigger than the GPU can fit.
@@ -143,12 +144,12 @@ def xformd_pos(mode: str = 'train', level_node: int = 0, train_on_level: int = 0
 
         #. 5 seperate networks are trained independently on the patches which include 5 different level positions.
         The user is responsible to ensure the input patches are from the same level as the networks.
+
         #. 1 network with an extra node to receive the level information (1,2,3,4,5) are trained. The user is
         responsible to ensure the level information is the same as the input patches.
 
-
         `level_node` is specified when your network has extra input node for level information apart the normal input
-        node for images.
+         node for images.
 
         `train_on_level` is specified when you want your network to output only one level. Then the transform will
          crop a 3D region in which this level must be visible.
