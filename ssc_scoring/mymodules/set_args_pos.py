@@ -21,16 +21,14 @@ def get_args():
 
 
     parser.add_argument('--pretrained', choices=(1, 0), help='pretrained or not', type=int, default=0)
-    parser.add_argument('--infer_2nd', choices=(1, 0), help='pretrained or not', type=int, default=0)
+    parser.add_argument('--infer_2nd', choices=(1, 0), help='', type=int, default=0)
 
     parser.add_argument('--net', choices=('vgg11_3d', 'r3d_resnet', 'cnn3fc1', 'cnn4fc2', 'cnn5fc2','cnn6fc2',
                                           'cnn2fc1', 'cnn3fc2'), help='network name', type=str, default='vgg11_3d')
     parser.add_argument('--fc2_nodes', help='the number of nodes of fc2 layer, original is 4096', type=int, default=1024)
     parser.add_argument('--fc1_nodes', help='the number of nodes of fc2 layer, original is 4096', type=int, default=1024)
-    parser.add_argument('--fc_m1', help='the number of nodes of last layer', type=int, default=512)
 
     parser.add_argument('--total_folds', choices=(4, 5), help='4-fold training', type=int, default=4)
-    parser.add_argument('--sampler', choices=(1, 0), help='if customer sampler?', type=int, default=0)
     parser.add_argument('--workers',  help='number of workers for dataloader', type=int, default=6)
     parser.add_argument('--ts_level_nb', choices=(235, 240), help='if customer sampler?', type=int, default=240)
 

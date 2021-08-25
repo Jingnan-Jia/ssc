@@ -141,10 +141,10 @@ def xformd_pos(mode: str = 'train', level_node: int = 0, train_on_level: int = 0
         So I proposed to input a high-resolution patch which include only one level. In order to make the networks know
         which level the input patch is, I proposed 2 methods:
 
-            #. 5 seperate networks are trained independently on the patches which include 5 different level positions.
-            The user is responsible to ensure the input patches are from the same level as the networks.
-            #. 1 network with an extra node to receive the level information (1,2,3,4,5) are trained. The user is
-            responsible to ensure the level information is the same as the input patches.
+        #. 5 seperate networks are trained independently on the patches which include 5 different level positions.
+        The user is responsible to ensure the input patches are from the same level as the networks.
+        #. 1 network with an extra node to receive the level information (1,2,3,4,5) are trained. The user is
+        responsible to ensure the level information is the same as the input patches.
 
 
         `level_node` is specified when your network has extra input node for level information apart the normal input
@@ -161,6 +161,13 @@ def xformd_pos(mode: str = 'train', level_node: int = 0, train_on_level: int = 0
     :param y_size: patch size along y axial
     :param x_size: patch size along x axial
     :return: Composed transforms.
+
+    Example:
+
+    >>> xformd_pos(mode='valid', level_node=0, train_on_level=2, z_size=192, y_size = 256, x_size=256)
+
+    One use case is :meth:`ssc_scoring.mymodules.mydata.LoadPos.xformd`.
+
     """
     xforms = [LoadDatad()]
     if level_node or train_on_level:

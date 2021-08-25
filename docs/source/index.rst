@@ -4,8 +4,14 @@ Introduction
 ===============
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: Tutorial:
+
+   tutorial
+
+.. toctree::
+   :maxdepth: 1
+   :caption: API:
 
    modules
 
