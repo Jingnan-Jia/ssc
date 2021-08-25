@@ -1,8 +1,10 @@
 Experiment summary
 ==================
 
-
-
+Status
+-----------------------------------------------------------------------
+[position prediction]: Latest summary **NOT** done.
+[score prediction]: Latest summary done.
 
 
 
@@ -58,25 +60,21 @@ sometimes obtained by compare the slice with other slices. So some looked health
 adviced to use the original pixel values to make sure the pixel values. So I removed the normalization layer and also
 tried the other 3 methods.
 
-The ex ID for `RescaleToNeg1500Pos1500d()`, `--gg_as_ret=1`: 1105, 1106, 1107, 1108 [**Baseline**]
-valid_mae_end5 = 5.04 (averaged in 4 folds)
+- The ex ID for `RescaleToNeg1500Pos1500d()`, `--gg_as_ret=1`: 1105, 1106, 1107, 1108
+    valid_mae_end5 = 5.04 (averaged in 4 folds) [**Baseline**]
 
-The ex ID for `RescaleToNeg1500Pos1500d()`, `--gg_as_ret=1`: 1605, 1606, 1608, 1607
-valid_mae_end5 = 5.062 (averaged in 4 folds)
+- The ex ID for `RescaleToNeg1500Pos1500d()`, `--gg_as_ret=1`: 1605, 1606, 1608, 1607
+    valid_mae_end5 = 5.062 (averaged in 4 folds)
 
-The ex ID for `RescaleToNeg1500Pos1500d()`, `--gg_as_ret=0`: 1595, 1596, 1599, 1597
-valid_mae_end5 = 5.08 (averaged in 4 folds)
+- The ex ID for `RescaleToNeg1500Pos1500d()`, `--gg_as_ret=0`: 1595, 1596, 1599, 1597
+    valid_mae_end5 = 5.08 (averaged in 4 folds)
 
-The ex ID for `NormNeg1To1d()`: Not started
-valid_mae_end5 = None (averaged in 4 folds)
+- The ex ID for `NormNeg1To1d()`: Not started
+    valid_mae_end5 = None (averaged in 4 folds)
 
-The ex ID for `Without any Norm`, `--gg_as_ret=1`: 1585, 1586, 1587, 1588
-valid_mae_end5 = 5.115 (averaged in 4 folds)
+- The ex ID for `Without any Norm`, `--gg_as_ret=1`: 1585, 1586, 1587, 1588
+    valid_mae_end5 = 5.115 (averaged in 4 folds)
 
-
-Several issures:
-
-#. where is the ex id without any normalization?
 
 
 Using more patches as the seed of synthetic data
