@@ -16,21 +16,37 @@ from torchvision.transforms import CenterCrop, RandomAffine
 import os
 import matplotlib.pyplot as plt
 from statistics import mean
-from monai.transforms import MapTransform, ScaleIntensityRange
+from monai.transforms import Transform, ScaleIntensityRange
 from monai.transforms import RandomizableTransform
 
 manager = Manager()
+# Store the numbers of each label during multi-process training/validaug as a monitor of balanced label distribution.
 train_label_numbers = manager.dict(
     {label: key for label, key in zip(np.arange(0, 21) * 5, np.zeros((21,)).astype(np.int))})
 train_lock = Lock()
+
 validaug_label_numbers = manager.dict(
     {label: key for label, key in zip(np.arange(0, 21) * 5, np.zeros((21,)).astype(np.int))})
 validaug_lock = Lock()
+
+# Create two values to store the numbers of original images and synthetic images during multi-process training.
 ori_nb = manager.Value('ori_nb', 0)
 sys_nb = manager.Value('sys_nb', 0)
 
 
-def savefig(save_flag, img, fpath):
+def savefig(save_flag: bool, img: np.ndarray, fpath: str) -> None:
+    """Save figure.
+
+    Args:
+        save_flag: Save or not.
+        img: Image numpy array.
+        fpath: Fully image path.
+
+    Returns:
+        None. Image will be saved to disk.
+
+    """
+
     directory = os.path.dirname(fpath)
     if not os.path.isdir(directory):
         os.makedirs(directory)
@@ -44,6 +60,18 @@ def savefig(save_flag, img, fpath):
 
 
 def resort_pts_for_convex(pts_ls: list) -> list:
+    """Re-sort the polygon points to get a convex polygon.
+
+    Connect all of the points: start from the most left one, then left-bottom, gradually go to the right-bottom,
+    then right-top, finally left-top.
+
+    Args:
+        pts_ls: A list of points, [(x1, y1), (x2, y2), ...]
+
+    Returns:
+        A new list of points. Connecting the points in the new list can get a convex.
+
+    """
     pts_ls = sorted(pts_ls, key=lambda x: x[0])  # sort list by the x position
     new_pts_ls: list = [pts_ls[0]]  # decide the first point
     del pts_ls[0]  # remove the first point from original list
@@ -81,6 +109,22 @@ def resort_pts_for_convex(pts_ls: list) -> list:
 
 
 def gen_pts(nb_points: int, limit: int, radius: int) -> np.ndarray:
+    """Get a list of points (a list of (x, y)) for the generation of convex polygon.
+
+    Details:
+        #. Randomly generate the first point in `[0, limit]`.
+        #. Randomly generate other points whose relative distance to the first point is less than `radious`.
+        #. Correct points outside the limit.
+        #. re-sort the points so that connection of these points from the first one to the last one lead to a polygon.
+
+    Args:
+        nb_points: Number of points.
+        limit: The limit/upperbound of x and y
+        radius: Radius of the circle which can include all of these points.
+
+    Returns:
+        A list of points.
+    """
     pts_ls: list = []
     for i in range(nb_points):
         if i == 0:
@@ -110,7 +154,7 @@ def gen_pts(nb_points: int, limit: int, radius: int) -> np.ndarray:
     return pts
 
 
-class SysthesisNewSampled(RandomizableTransform, MapTransform):
+class SysthesisNewSampled(RandomizableTransform, Transform):
     def __init__(self,
                  keys,
                  retp_fpath,
@@ -122,8 +166,21 @@ class SysthesisNewSampled(RandomizableTransform, MapTransform):
                  sampler,
                  gen_gg_as_retp,
                  gg_increase
-
                  ):
+        """Synthesis new image samples.
+
+        Args:
+            keys:
+            retp_fpath:
+            gg_fpath:
+            mode:
+            sys_pro_in_0:
+            retp_blur:
+            gg_blur:
+            sampler:
+            gen_gg_as_retp:
+            gg_increase:
+        """
         super().__init__(keys)
         # self.sys_ratio = sys_ratio
         self.image_size = 512
@@ -216,11 +273,10 @@ class SysthesisNewSampled(RandomizableTransform, MapTransform):
         d = dict(data)
         print("ori label is: " + str(d['label_key']))
 
-        if d['label_key'][0].item() == 0:
+        if d['label_key'][0].item() == 0:  # Possible for synthesis
 
             tmp = random.random()
-            # print("tmp random is : " + str(tmp) + " self.sys_pro: " + str(self.sys_pro))
-            if tmp < self.sys_pro:
+            if tmp < self.sys_pro:  # Do synthesis
                 with train_lock:
                     sys_nb.value += 1
                     print("sys_nb: " + str(sys_nb.value))
@@ -228,13 +284,13 @@ class SysthesisNewSampled(RandomizableTransform, MapTransform):
                     d[key], d['label_key'] = self.systhesis(d[key], d['lung_mask_key'])
                     # with train_lock:
                     print("after systhesis, label is " + str(d['label_key']) + str("\n"))
-            else:
+            else:  # No synthesis, number of original images +1
                 with train_lock:
                     ori_nb.value += 1
                     print("ori_nb: " + str(ori_nb.value))
                 # with train_lock:
                 print("No need for systhesis, label is " + str(d['label_key']) + str("\n"))
-        else:
+        else:  # No synthesis, number of original images +1
             with train_lock:
                 ori_nb.value += 1
                 print("ori_nb: " + str(ori_nb.value))
@@ -275,6 +331,7 @@ class SysthesisNewSampled(RandomizableTransform, MapTransform):
             radius = 200
             for i in range(nb_shapes):
                 nb_points: int = random.randint(3, 10)
+                # Array of polygons where each polygon is represented as an array of points.
                 pts: np.ndarray = gen_pts(nb_points, limit=self.image_size, radius=radius)
                 # image: np.ndarray = cv2.polylines(fig_, [pts], True, color, thickness=1)
 

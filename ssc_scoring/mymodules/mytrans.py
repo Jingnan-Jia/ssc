@@ -34,16 +34,13 @@ class RescaleToNeg1500Pos1500d(Transform):
 
 
 class NormNeg1To1d(Transform):
-    """ Rescale voxel values to [-1, 1]."""
+    """Truncate voxel values to [-1500, 1500], then rescale voxel values to [-1, 1]."""
 
     def __init__(self, key='image_key'):
         self.key = key
 
     def __call__(self, data: Mapping[str, Union[np.ndarray, str]]) -> Dict[str, np.ndarray]:
-        if isinstance(data[self.key], torch.Tensor):
-            min_value, max_value = torch.min(data[self.key]), torch.max(data[self.key])
-        else:
-            min_value, max_value = np.min(data[self.key]), np.max(data[self.key])
+        min_value, max_value = -1500, 1500
 
         data[self.key] = ((data[self.key] - min_value) / (max_value - min_value) - 0.5) * 2
         return data

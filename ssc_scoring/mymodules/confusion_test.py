@@ -39,6 +39,18 @@ def get_acc_np(diag_np, total_np):
 
 
 def mae(df):
+    """
+
+    Args:
+        df: A DataFrame
+
+    Returns:
+        mae, totnp
+
+    Use case:
+        :func:`ssc_scoring.mymodules.confusion_test.confusion`.
+
+    """
     # arr = df.to_numpy()
     # labels = df.index.to_numpy().astype(int)
     preds = df.columns.to_numpy().astype(int)

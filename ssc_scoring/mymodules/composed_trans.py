@@ -64,7 +64,7 @@ def xformd_score(mode: str = 'train', synthesis: bool = False, args: Namespace =
 
     # xforms.append(NormImgPosd())
     # xforms.append(NormNeg1To1d())
-    # xforms.append(RescaleToNeg1500Pos1500d())
+    xforms.append(RescaleToNeg1500Pos1500d())
 
     transform = transforms.Compose(xforms)
 

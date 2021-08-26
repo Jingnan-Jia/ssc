@@ -43,8 +43,41 @@ Score prediction
 
 #. Merge the prediction of 4 folds and calculate the metrics based on the whole dataset:
 
+
 Inference by cascaded networks
 --------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 Train another network to refine position prediction

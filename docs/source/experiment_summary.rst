@@ -80,23 +80,30 @@ tried the other 3 methods.
 Using more patches as the seed of synthetic data
 -----------------------------------------------------------------------
 [score prediction]
-**TLDR: No effect**. valid_mae_end5 = 5.0575 (averaged in 4 folds)
+**TLDR: No idea**.
 
-In the previous experiments, all synthetic RETP patterns are from the same patch, similarly, all synthetic GG patterns
-are also from the same patch. We hope to obtain more patches which are full of the two patterns as the seed to generate
-more samples. These patches were carefully cropped by Jingnan in advance. By this way, I expected to see better results.
+.. warning::
+    **The following experiments are based on wrong code! Because only a random patch is selected as the seed instead of
+    all of the patches.**
 
-experiments' ID: 1614, 1615, 1612, 1613
+    - Using more patches as the seed of synthetic data:
+
+        **TLDR: Bad effect**. valid_mae_end5 = 5.0575 (averaged in 4 folds)
+
+        In the previous experiments, all synthetic RETP patterns are from the same patch, similarly, all synthetic GG patterns
+        are also from the same patch. We hope to obtain more patches which are full of the two patterns as the seed to generate
+        more samples. These patches were carefully cropped by Jingnan in advance. By this way, I expected to see better results.
+
+        experiments' ID: 1614, 1615, 1612, 1613
 
 
-Using more patches as the seed of synthetic data using bigger net
------------------------------------------------------------------------
-[score prediction]
-**TLDR: Bad effect**. valid_mae_end5 = 5.37 (averaged in 4 folds)
+    - Using more patches as the seed of synthetic data using bigger net
 
-I thought maybe bigger net can benefit from more variable syntheic data. So I trained Resnet18.
+        **TLDR: Bad effect**. valid_mae_end5 = 5.37 (averaged in 4 folds)
 
-experiments' ID: 1617, 1616, 1618, 1619
+        I thought maybe bigger net can benefit from more variable syntheic data. So I trained Resnet18.
+
+        experiments' ID: 1617, 1616, 1618, 1619
 
 
 

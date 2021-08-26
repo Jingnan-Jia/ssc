@@ -21,6 +21,15 @@ from ssc_scoring.mymodules.confusion_test import confusion
 from torch.utils.data import WeightedRandomSampler
 
 def sampler_by_disext(tr_y, sys_ratio=0.8):
+    """Balanced sampler according to score distribution of disext.
+
+    Args:
+        tr_y:
+        sys_ratio:
+
+    Returns:
+
+    """
     disext_list = []
     for sample in tr_y:
         if type(sample) in [list, np.ndarray]:
@@ -62,6 +71,16 @@ def sampler_by_disext(tr_y, sys_ratio=0.8):
 
 
 def compute_metrics(mypath: PathInit, mypath2=None, log_dict=None):
+    """
+
+    Args:
+        mypath:
+        mypath2:
+        log_dict:
+
+    Returns:
+
+    """
     for mode in ['train', 'valid', 'test', 'validaug']:
         if mypath.project_name == 'score':
             label = mypath.label(mode)
@@ -85,6 +104,11 @@ def compute_metrics(mypath: PathInit, mypath2=None, log_dict=None):
 
 
 def get_mae_best(fpath):
+    """
+
+    :param fpath:
+    :return:
+    """
     loss = pd.read_csv(fpath)
     mae = min(loss['mae'].to_list())
     return mae
@@ -309,6 +333,19 @@ def record_mem_info():
 
 
 def record_GPU_info(outfile):
+    """
+    Record GPU information to `outfile`.
+
+    The format of `outfile` is: slurm-[JOB_ID].out
+
+    :param outfile:
+    :return:
+
+    Example:
+
+    >>> record_GPU_info('slurm-98234.out')
+
+    """
     if outfile:
         jobid_gpuid = outfile.split('-')[-1]
         tmp_split = jobid_gpuid.split('_')[-1]
