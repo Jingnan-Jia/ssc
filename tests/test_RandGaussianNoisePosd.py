@@ -10,8 +10,6 @@ import os
 
 from parameterized import parameterized
 import numpy as np
-import myutil.myutil as futil
-from tests.utils import Compare
 
 
 TEST_CASE_1 = [

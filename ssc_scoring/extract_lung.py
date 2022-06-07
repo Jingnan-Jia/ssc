@@ -4,13 +4,13 @@
 # @Email   : jiajingnan2222@gmail.com
 # Extract the lungs using morphological operations and save them to same directory with the original files
 from typing import Sequence
+from medutils.medutils import load_itk, save_itk, get_all_ct_names
 
-from myutil.myutil import get_all_ct_names, load_itk, save_itk
 from scipy.ndimage import morphology
 import numpy as np
 import time
 from skimage.measure import label
-from mymodules.path import PathScore as Path
+from ssc_scoring.mymodules.path import PathPos as Path
 
 
 def largest_connected_parts(bw_img: np.ndarray, nb_need_saved=2):
@@ -82,6 +82,7 @@ def extract(scan_files: Sequence) -> None:
         ct_dia2 = morphology.binary_dilation(ct_neg, np.ones((6, 6, 6))).astype(int)
         ct_lung = largest_connected_parts(ct_dia2, 2)
         ct_ero2 = morphology.binary_erosion(ct_lung, np.ones((6, 6, 6))).astype(int)
+        ct_ero2 = morphology.binary_erosion(ct_ero2, np.ones((3, 3, 3))).astype(int)
 
         save_itk(scan.split('.mha')[0] + '_lung.mha', ct_ero2, ori, sp)
         print('save lung to ', scan.split('.mha')[0] + '_lung.mha')
@@ -90,5 +91,6 @@ def extract(scan_files: Sequence) -> None:
 if __name__ == "__main__":
     mypath = Path()
     scan_files = get_all_ct_names(mypath.dataset_dir(resample_z=0), name_suffix="CTimage")
-
+    scan_files = [file for file in scan_files if ('108' in file or '226' in file or '247' in file)]
+    print(scan_files)
     extract(scan_files)

@@ -1,6 +1,6 @@
 # SSc score prediction
 [![codecov](https://codecov.io/gh/Jingnan-Jia/ssc_scoring/branch/master/graph/badge.svg?token=Z808SDKUFQ)](https://codecov.io/gh/Jingnan-Jia/ssc_scoring)
-![example workflow](https://github.com/Jingnan-Jia/ssc_scoring/actions/workflows/test.yml/badge.svg)
+![example workflow](https://github.com/Jingnan-Jia/ssc_scoring/actions/workflows/test.yml/badge.svg?branch=master)
 
 * `script.sh` is used to submit jobs to slurm
 * `set_args.py` stores the super parameters. imported by `run.py`

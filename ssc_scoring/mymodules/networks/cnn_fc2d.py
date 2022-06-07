@@ -6,8 +6,13 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from ssc_scoring.mymodules.summary import summary
+from ssc_scoring.mymodules.networks.myconvnext import convnext_tiny, convnext_large, convnext_base
+from ssc_scoring.mymodules.networks.myinception import inception_v3
+
 import copy
-import myutil.myutil as futil
+from functools import partial
+from torch.nn import functional as F
+from torchvision.ops.misc import ConvNormActivation
 
 class ReconNet(nn.Module):
     def __init__(self, reg_net, input_size=512):
@@ -217,19 +222,38 @@ def get_net(name: str, nb_cls: int, args):
         net.classifier[4] = torch.nn.Linear(in_features=args.fc1_nodes, out_features=args.fc2_nodes)
         net.classifier[6] = torch.nn.Linear(in_features=args.fc2_nodes, out_features=3)
     elif name == 'cnn3fc1':
-        net = Cnn3fc1(num_classes=3)
+        net = Cnn3fc1(num_classes=nb_cls)
     elif name == 'cnn2fc1':
-        net = Cnn2fc1(num_classes=3)
+        net = Cnn2fc1(num_classes=nb_cls)
     elif name == 'squeezenet':
-        net = models.squeezenet1_0()
+        net = models.squeezenet1_0(pretrained=args.pretrained)
+        net.features[0] = nn.Conv2d(1, 96, kernel_size=7, stride=2)
+        final_conv = nn.Conv2d(512, nb_cls, kernel_size=1)
+        net.classifier = nn.Sequential(
+            nn.Dropout(p=0.3), final_conv, nn.ReLU(inplace=True), nn.AdaptiveAvgPool2d((1, 1))
+        )
     elif name == 'densenet161':
-        net = models.densenet161()
+        net = models.densenet161(pretrained=args.pretrained)
+        net.features[0] = nn.Conv2d(1, 96, kernel_size=7, stride=2, padding=3, bias=False)
+        net.classifier = nn.Linear(2208, nb_cls)
     elif name == 'inception_v3':
         net = models.inception_v3()
     elif name == 'mnasnet1_0':
         net = models.mnasnet1_0()
     elif name == 'shufflenet_v2_x1_0':
-        net = models.shufflenet_v2_x1_0()
+        net = models.shufflenet_v2_x1_0(pretrained=args.pretrained)
+        net.conv1[0] = nn.Conv2d(1, 24, 3, 2, 1, bias=False)
+        net.fc = nn.Linear(1024, nb_cls)
+    elif 'convnext' in name:
+        if name == 'convnext_tiny':
+            net = convnext_tiny(pretrained=True)
+            net.classifier[-1] = nn.Linear(768, nb_cls)
+        if name == 'convnext_large':
+            net = convnext_large(pretrained=True)
+            net.classifier[-1] = nn.Linear(1536, nb_cls)
+    elif name == 'inception':
+        net = inception_v3(pretrained=args.pretrained)
+
     elif 'res' in name:
         if name == 'resnext50_32x4d':
             net = models.resnext50_32x4d(pretrained=args.pretrained, progress=True)
@@ -238,7 +262,9 @@ def get_net(name: str, nb_cls: int, args):
             net = models.resnet18(pretrained=args.pretrained, progress=True)
             net.fc = nn.Linear(512, nb_cls)
         elif name == 'wide_resnet50_2':
-            net = models.wide_resnet50_2()
+            net = models.wide_resnet50_2(pretrained=args.pretrained, progress=True)
+            net.fc = nn.Linear(512 * models.resnet.Bottleneck.expansion, nb_cls)
+
         elif name == 'resnext101_32x8d':
             net = models.resnext101_32x8d(pretrained=args.pretrained, progress=True)
             net.fc = nn.Linear(512 * models.resnet.Bottleneck.expansion, nb_cls)

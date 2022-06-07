@@ -10,7 +10,6 @@ import os
 from parameterized import parameterized
 from ssc_scoring.mymodules.mytrans import AddChanneld
 import numpy as np
-import myutil.myutil as futil
 from tests.utils import Compare
 
 

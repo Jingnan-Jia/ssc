@@ -2,15 +2,29 @@
 # @Time    : 7/11/21 2:28 PM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
+from collections import OrderedDict
+from typing import (Tuple, Union)
+
+import numpy as np
 import torch
 import torch.nn as nn
-from collections import OrderedDict
-from typing import (List, Tuple, Optional, Union, Dict, Sequence)
-import numpy as np
 
 __all__ = ['summary']
-def summary(model: nn.Module, input_size: Tuple[int, ...], batch_size=-1, device="cpu"):
-    """ Get the parameter size of the model."""
+
+
+def summary(model: nn.Module, input_size: Tuple[int, ...], batch_size=-1, device="cpu") -> OrderedDict:
+    """Return a summary instance which include the size of each layer.
+
+    Args:
+        model: Network
+        input_size: Input image size
+        batch_size: Batch size
+        device: cpu or gpu
+
+    Example:
+        :class:`ssc_scoring.mymodules.networks.cnn_fc2d.ReconNet`
+
+    """
     def register_hook(module):
 
         def hook(module, input, output):

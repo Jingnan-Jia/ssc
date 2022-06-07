@@ -10,7 +10,7 @@ import os
 from parameterized import parameterized
 from ssc_scoring.mymodules.mytrans import LoadDatad
 import numpy as np
-import myutil.myutil as futil
+import medutils.medutils as futil
 from tests.utils import Compare
 
 TEST_CASE_Error = [

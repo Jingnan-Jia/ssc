@@ -27,7 +27,7 @@ def extract_label(file_fpath: str) -> None:
 
     with open(file_fpath) as f:
         for row in f:
-            divid_flap = "after systhesis, label is tensor"
+            divid_flap = "after synthesis, label is tensor"
             if divid_flap in row:
                 score = row.split(divid_flap)[-1]
                 score = score[2:-3]  # exclude [( and )]\n
@@ -38,7 +38,7 @@ def extract_label(file_fpath: str) -> None:
                     score_retp.append(int(float(score[2])))
                 except:
                     pass
-            divid_flap2 = "No need for systhesis, label is tensor"
+            divid_flap2 = "No need for synthesis, label is tensor"
             if divid_flap2 in row:
                 score = row.split(divid_flap2)[-1]
                 score = score[2:-3]  # exclude [( and )]\n
@@ -100,5 +100,6 @@ def extract_label(file_fpath: str) -> None:
 
 
 if __name__ == '__main__':
-    path = "results/slurmlogs/slurm-96342_0.out"
+    path = "/data/jjia/ssc_scoring/ssc_scoring/results/slurmlogs/slurm-120014_1.out"
+        # "results/slurmlogs/slurm-96342_0.out"
     extract_label(file_fpath = path)

@@ -32,7 +32,7 @@ class TestPathPos(unittest.TestCase):
         self.assertEqual(mypath.data('train'), 'results/models_pos/unittest/train_data.csv')
 
         self.assertEqual(mypath.dataset_dir(resample_z=0), 'dataset/SSc_DeepLearning')
-        self.assertEqual(mypath.dataset_dir(resample_z=256), 'dataset/LowResolution_fix_size')
+        self.assertEqual(mypath.dataset_dir(resample_z=256), 'dataset/LowRes256_256_256')
         self.assertEqual(mypath.dataset_dir(resample_z=512), 'dataset/LowRes512_192_192')
         self.assertEqual(mypath.dataset_dir(resample_z=800), 'dataset/LowRes800_160_160')
         self.assertEqual(mypath.dataset_dir(resample_z=1024), 'dataset/LowRes1024_256_256')

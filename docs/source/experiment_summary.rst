@@ -12,19 +12,65 @@ Status
 
 
 
-
-
-
-
-
-
-
-
-Performance of refined PosNet
+Performance of refined PosNet (train high resolution CT)
 -----------------------------------------------------------------------
 
 [position prediction]
 **TLDR: todo.**
+
+- Directly input high resolution CT patches (192 * 512 * 512) into network.
+    **TLDR** Bad effect.**
+
+    This patch can only cover one or two levels. So the labels (relative slice number) for those levels outside
+    the patch would be 0 (lower bound) or 192 (upper bound). To get the position prediction, during inference, we need
+    to have a slice window to output a lot of positions and do some post processing. This method was inspired by the
+    following reference.
+
+    References:
+        S. Belharbi et al., “Spotting L3 slice in CT scans using deep convolutional network and transfer learning,”
+        Comput. Biol. Med., vol. 87, pp. 95–103, Aug. 2017, doi: 10.1016/j.compbiomed.2017.05.018.
+
+    The trained results are pretty bad. It does not have clear peak point as shown in the above reference. So I did not
+    try it anymore.
+
+
+- With `train_on_level` to receive patches from a region which include a specific level position, and output this level.
+
+    Compared with the upper method, current method has 2 differences: 1) the input patches are not cropped from the
+    whole image, but from the region which include a specified level position. 2） the labels only include one level.
+
+    Therefore, we have to train 5 different networks for 5 different level position prediction.
+
+    ==============  ========    ========    ========    ========    =========
+    train_on_level  Fold1        Fold2       Fold3       Fold4      ave_MAE
+    ==============  ========    ========    ========    ========    =========
+    1               602->462    601->463    603->459    604->457    3.8925
+    2               600->464    599->461    688->466    ->465
+    3               596->468    595->467    598->469    597->470    6.2325
+    4               571->528    572->529    573->520    574->519    2.84
+    5               589->530    686->532    590->512    687->527    2.6425
+    Average                                                         3?
+    ==============  ========    ========    ========    ========    =========
+
+
+- With `level_node` to use an extra node to receive an extra input (level information) in fully connected layer. So the number of nodes in
+fully connected layer became 1025 from 1024.
+
+    **TLDR** Bad effect.**
+
+    The network did not coverage. I think this is because that the extra node is ignored by the
+    network. 1 node in 1025 nodes is really small.
+
+    `Level_node=5`:
+
+    ==============  ====    ====    ====    ====    ====
+    Fold            1       2       3       4       ave
+    ==============  ====    ====    ====    ====    ====
+    Experiment ID   455     456     460     458     ??
+    ==============  ====    ====    ====    ====    ====
+
+    .. Note::
+        Do not use extra node. Directory multiply the level information by fully connected layer.
 
 
 Performance of cascaded refined PosNet
@@ -38,8 +84,23 @@ Performance of cascaded networks
 -----------------------------------------------------------------------
 
 [PosNet + ScoreNet]
-**TLDR: todo.**
+**TLDR: Very good! The PosNet can not affect the final results**. More details please see word documents.
 
+PosNet: 193_194_276_277
+ScoreNet: 1405_1404_1411_1410
+
+Pure ScoreNet performance:
+
+==================  =====
+valid_WK_disext     0.647
+valid_WK_gg
+
+
+PosNet + ScoreNet performance:
+
+==================  =====
+valid_WK_disext     0.644
+valid_WK_gg
 
 Effect of different normalization methods
 --------------------------------------------------------------------
@@ -80,7 +141,13 @@ tried the other 3 methods.
 Using more patches as the seed of synthetic data
 -----------------------------------------------------------------------
 [score prediction]
-**TLDR: No idea**.
+
+**TLDR: No effect**.
+
+experiments' ID (vgg11_3d): 1658, 1659, 1657, 1656. valid_mae_end5 = 4.99 (averaged in 4 folds)
+
+experiments' ID (resnet18): 1660, 1661, 1663, 1662. valid_mae_end5 = 5.2575 (averaged in 4 folds)
+
 
 .. warning::
     **The following experiments are based on wrong code! Because only a random patch is selected as the seed instead of

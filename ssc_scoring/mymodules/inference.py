@@ -2,43 +2,46 @@
 # @Time    : 7/6/21 7:17 PM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
-from typing import Dict
+
+from typing import (Union, Dict)
 
 import monai
-import myutil.myutil as futil
+import medutils.medutils as futil
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from typing import (List, Tuple, Optional, Union, Dict, Sequence)
-import sys
 
-from ssc_scoring.mymodules.mytrans import LoadDatad, NormImgPosd, RandCropLevelRegiond, CropCorseRegiond
-from ssc_scoring.mymodules.path import PathPos as Path
+from ssc_scoring.mymodules.mytrans import LoadDatad, NormImgPosd, RandCropLevelRegiond, CropCorseRegiond, CropPosd
 from ssc_scoring.mymodules.path import PathInit
+from ssc_scoring.mymodules.path import PathPos as Path
 
 
 def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid', args=None):
     print(f'start load {fpath} for sliding window inference')
-    xforms = [LoadDatad(), NormImgPosd()]
-
+    xforms = [LoadDatad(), NormImgPosd()]  #
     trans = monai.transforms.Compose(xforms)
 
     data = trans({'fpath_key': fpath, 'world_key': world_pos})
-
     raw_x = data['image_key']
-    data['label_in_img_key'] = np.array(data['label_in_img_key'][args.train_on_level - 1])
 
-    label = data['label_in_img_key']
-    print('data_world_key', data['world_key'])
+    assert raw_x.shape[0] > z_size  # shape along z should be higher than z_size
 
-    assert raw_x.shape[0] > z_size
-    start_lower: int = label - z_size
-    start_higher: int = label + z_size
-    start_lower = max(0, start_lower)
-    start_higher = min(raw_x.shape[0], start_higher)
+    if args.train_on_level or args.level_node:  # the output 3D patch should be around the specific level
+        data['label_in_img_key'] = np.array(data['label_in_img_key'][args.train_on_level - 1])
+        label = data['label_in_img_key']
+        start_lower: int = label - z_size  # start lower than this value can not crop a patch including the level
+        start_lower = max(0, start_lower)  # if start_lower<0, use 0
+
+        start_higher: int = label  # start higher than this value can not include the level
+        start_higher = min(raw_x.shape[0] - z_size, start_higher) # if start_higher > raw_x.shape[0]- z_size
+    else:  # if not level is assigned, start should range from 0 to raw_x.shape[0] - z_size
+        start_lower = 0
+        start_higher = raw_x.shape[0] - z_size
+    # print('data_world_key', data['world_key'])
 
     # ranges = raw_x.shape[0] - z_size
-    print(f'ranges: {start_lower} to {start_higher}')
+    print(f'start point ranges: {start_lower} to {start_higher}')
 
     batch_patch = []
     batch_new_label = []
@@ -46,7 +49,7 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid'
     i = 0
 
     start = start_lower
-    while start < label:
+    while start < start_higher:
         if i < batch_size:
             print(f'start: {start}, i: {i}')
             if args.infer_2nd:
@@ -58,12 +61,15 @@ def SlidingLoader(fpath, world_pos, z_size, stride=1, batch_size=1, mode='valid'
                                         start=start,
                                         data_fpath=mypath2.data(mode),
                                         pred_world_fpath=mypath2.pred_world(mode))
-            else:
+            elif args.level_node or args.train_on_level:
                 crop = RandCropLevelRegiond(level_node=args.level_node,
                                             train_on_level=args.train_on_level,
                                             height=args.z_size,
                                             rand_start=False,
                                             start=start)
+            else:
+                crop = CropPosd(start=start, height=args.z_size)
+
             new_data = crop(data)
             new_patch, new_label = new_data['image_key'], new_data['label_in_patch_key']
             # patch: np.ndarray = raw_x[start:start + z_size]  # z, y, z
@@ -226,6 +232,9 @@ class Evaluater_score():
 
     def run(self):
         for data in self.dataloader:
+            print(f'mode: {self.mode}, ==========')
+            print(f"data from {data['fpath_key']}")
+
             if 'label_key' not in data:
                 batch_x, batch_y = data['image_key'], data['image_key']
             else:
@@ -244,14 +253,16 @@ class Evaluater_score():
             else:
                 with torch.no_grad():
                     pred = self.net(batch_x)
+            print(f'batch_pred is: {pred}')
+            print(f'mode: {self.mode}, ==========')
 
             record_preds(self.mode, batch_y, pred, self.mypath)
 
 
-def record_best_preds(net: torch.nn.Module, data_dict: Dict[str, DataLoader], mypath: PathInit, args):
+def record_best_preds(net: torch.nn.Module, data_dict: Dict[str, DataLoader], mypath: Path, args):
     net.load_state_dict(torch.load(mypath.model_fpath))  # load the best weights to do evaluation
     for mode, data in data_dict.items():
-        dataloader = data['dl']
+        dataloader = data['dl'] if isinstance(data, dict) else data
         if mypath.project_name=='score':
             evaluater = Evaluater_score(net, dataloader, mode, mypath, args)
         else:

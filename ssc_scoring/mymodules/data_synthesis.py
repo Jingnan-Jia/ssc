@@ -9,7 +9,7 @@ from multiprocessing import Manager, Lock
 from typing import (Union)
 
 import cv2
-import myutil.myutil as futil
+from medutils.medutils import load_itk
 import numpy as np
 import torch
 from torchvision.transforms import CenterCrop, RandomAffine
@@ -20,7 +20,7 @@ from monai.transforms import Transform, ScaleIntensityRange
 from monai.transforms import RandomizableTransform
 
 manager = Manager()
-# Store the numbers of each label during multi-process training/validaug as a monitor of balanced label distribution.
+# Store the numbers of each label during multi-process training/validaug as a monitor of _balanced label distribution.
 train_label_numbers = manager.dict(
     {label: key for label, key in zip(np.arange(0, 21) * 5, np.zeros((21,)).astype(np.int))})
 train_lock = Lock()
@@ -34,18 +34,25 @@ ori_nb = manager.Value('ori_nb', 0)
 sys_nb = manager.Value('sys_nb', 0)
 
 
-def savefig(save_flag: bool, img: np.ndarray, fpath: str) -> None:
+def savefig(save_flag: bool, img: np.ndarray, image_name: str, dir: str = "image_samples") -> None:
     """Save figure.
 
     Args:
         save_flag: Save or not.
         img: Image numpy array.
-        fpath: Fully image path.
+        image_name: image name.
+        dir: directory
 
     Returns:
         None. Image will be saved to disk.
 
+    Examples:
+        :func:`ssc_scoring.mymodules.data_synthesis.SysthesisNewSampled`
+
     """
+
+    fpath = os.path.join(dir, image_name)
+    # print(f'image save path: {fpath}')
 
     directory = os.path.dirname(fpath)
     if not os.path.isdir(directory):
@@ -70,6 +77,9 @@ def resort_pts_for_convex(pts_ls: list) -> list:
 
     Returns:
         A new list of points. Connecting the points in the new list can get a convex.
+
+    Examples:
+        :func:`ssc_scoring.mymodules.data_synthesis.gen_pts`
 
     """
     pts_ls = sorted(pts_ls, key=lambda x: x[0])  # sort list by the x position
@@ -124,6 +134,10 @@ def gen_pts(nb_points: int, limit: int, radius: int) -> np.ndarray:
 
     Returns:
         A list of points.
+
+    Example:
+        :func:`ssc_scoring.mymodules.data_synthesis.SysthesisNewSampled`
+
     """
     pts_ls: list = []
     for i in range(nb_points):
@@ -156,7 +170,7 @@ def gen_pts(nb_points: int, limit: int, radius: int) -> np.ndarray:
 
 class SysthesisNewSampled(RandomizableTransform, Transform):
     def __init__(self,
-                 keys,
+                 key,
                  retp_fpath,
                  gg_fpath,
                  mode,
@@ -165,29 +179,33 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
                  gg_blur,
                  sampler,
                  gen_gg_as_retp,
-                 gg_increase
+                 gg_increase,
+                 tr_x
                  ):
         """Synthesis new image samples.
 
         Args:
-            keys:
-            retp_fpath:
-            gg_fpath:
-            mode:
-            sys_pro_in_0:
-            retp_blur:
-            gg_blur:
-            sampler:
-            gen_gg_as_retp:
-            gg_increase:
+            key: Always be 'image_key'
+            retp_fpath: Full path for one retp seed
+            gg_fpath: Full path for one gg seed
+            mode: Chosed from 'train' or 'validaug'
+            sys_pro_in_0: Probability to synthesis image when is is healthy
+            retp_blur: Smooth width between retp pattern foreground and healthy background
+            gg_blur: Smooth width between gg pattern foreground and healthy background
+            sampler: If using _balanced sampler which leads to _balanced label distribution
+            gen_gg_as_retp: If generage gg pattern using the same method as it used by retp
+            gg_increase: Voxel value increase for gg pattern, because gg part is always brighter
+
         """
-        super().__init__(keys)
         # self.sys_ratio = sys_ratio
+        super(RandomizableTransform, self).__init__()
+        self.key = key
         self.image_size = 512
         self.random_affine = RandomAffine(degrees=180, translate=(0.1, 0.1), scale=(1 - 0.5, 1 + 0.1))
         self.center_crop = CenterCrop(self.image_size)
 
-        self.sys_pro = sys_pro_in_0 if sys_pro_in_0 else 20 / 21
+        self.sys_pro_in_0 = sys_pro_in_0
+        self.tr_x = tr_x
 
         self.mode = mode
         self.retp_fpath = retp_fpath  # retp will generated from its egg
@@ -198,18 +216,17 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
         self.gen_gg_as_retp = gen_gg_as_retp
         self.gg_increase = gg_increase
 
+        self.ret_eggs_fpath = self._filter_egg_fpaths_for_train('ret')
+        self.gg_eggs_fpath = self._filter_egg_fpaths_for_train('gg')
 
-        ret_eggs_fpath = glob.glob(os.path.join(os.path.dirname(self.retp_fpath), 'ret_*from*.mha'))
-        gg_eggs_fpath = glob.glob(os.path.join(os.path.dirname(self.gg_fpath), 'gg_*from*.mha'))
+        self.retp_temp = self._generate_candidate(self.ret_eggs_fpath)
+        self.gg_temp = self._generate_candidate(self.gg_eggs_fpath)
 
-        self.retp_temp = self.generate_candidate(ret_eggs_fpath)
-        self.gg_temp = self.generate_candidate(gg_eggs_fpath)
+        self.retp_candidate = self._rand_affine_crop(self.retp_temp)
+        self.gg_candidate = self._rand_affine_crop(self.gg_temp)
 
-        self.retp_candidate = self.rand_affine_crop(self.retp_temp)
-        self.gg_candidate = self.rand_affine_crop(self.gg_temp)
-
-        self.counter = 0
-        self.systh_y = []
+        self.counter = 0  # Count the number of training (or validaug) images
+        self.synth_y = []  # Labels of synthetic images
         if self.mode == "train":
             self.label_numbers = train_label_numbers
         elif self.mode == 'validaug':
@@ -217,11 +234,34 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
         else:
             raise Exception("mode is wrong for synthetic data", self.mode)
 
-    def generate_candidate(self, eggs_fpath):
+    def _filter_egg_fpaths_for_train(self, pattern='gg'):
+        if pattern=='gg':
+            egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.gg_fpath), 'gg_*from*.mha'))
+        elif pattern=='ret':
+            egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.retp_fpath), 'ret_*from*.mha'))
+        else:
+            raise Exception(f'pattern should be ret or gg, but is {pattern}')
+        tr_pat_ids = set([x_path.split('Pat_')[-1][:3] for x_path in self.tr_x])
+
+        # train_egg_fpaths = []
+        # for egg_fpath in egg_fpaths:
+        #     pat_id = egg_fpath.split('pat')[-1][:3]
+        #     print(f"tr_pat_ids: {tr_pat_ids}")
+        #     if pat_id in tr_pat_ids:
+        #         print(f"this pat_id {pat_id} from path {egg_fpath} is from training dataset, use it.")
+        #         train_egg_fpaths.append(egg_fpath)
+        #     else:
+        #         print(f"this pat_id {pat_id} from path {egg_fpath} is not from training dataset, give up it.")
+                
+        return egg_fpaths
+
+
+    def _generate_candidate(self, eggs_fpath):
         # ori_image_fpath = fpath.split('.mha')[0] + '_ori.mha'
         egg_fpath = random.choice(eggs_fpath)
-        egg = futil.load_itk(egg_fpath)
-        # ori = futil.load_itk(ori_image_fpath)
+        print(f'randomly select this egg: {egg_fpath}')
+        egg = load_itk(egg_fpath)
+        # ori = load_itk(ori_image_fpath)
         # normalize the egg using the original image information
         normalize0to1 = ScaleIntensityRange(a_min=-1500.0, a_max=1500.0, b_min=0.0, b_max=1.0, clip=True)
         egg = normalize0to1(egg)
@@ -236,14 +276,14 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
         temp = np.vstack(([temp] * nb_row))
         return temp
 
-    def rand_affine_crop(self, retp_temp: np.ndarray):
+    def _rand_affine_crop(self, retp_temp: np.ndarray):
         retp_temp_tensor = torch.from_numpy(retp_temp[None])
         retp_affina = self.random_affine(retp_temp_tensor)
         retp_candidate = self.center_crop(retp_affina)
         retp_candidate = torch.squeeze(retp_candidate).numpy()
         return retp_candidate
 
-    def balanced(self, label):
+    def _balanced(self, label):
         category = label // 5 * 5
         average = mean(list(self.label_numbers.values()))
         min_account = min(list(self.label_numbers.values()))
@@ -257,51 +297,49 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
         else:
             return True
 
-    def account_label(self, label):
+    def _account_label(self, label):
         category = label // 5 * 5
         # with self.lock:
         if self.mode == "train":
             with train_lock:
                 train_label_numbers[category] = train_label_numbers[category] + 1
-                print(sum(train_label_numbers.values()))
+                print(f'current train label numbers: {sum(train_label_numbers.values())}')
         else:
             with validaug_lock:
                 validaug_label_numbers[category] += 1
-                print(sum(validaug_label_numbers.values()))
+                print(f'current validaug label numbers: {sum(validaug_label_numbers.values())}')
 
     def __call__(self, data):
         d = dict(data)
         print("ori label is: " + str(d['label_key']))
 
         if d['label_key'][0].item() == 0:  # Possible for synthesis
-
             tmp = random.random()
-            if tmp < self.sys_pro:  # Do synthesis
+            if tmp < self.sys_pro_in_0:  # Do synthesis
                 with train_lock:
                     sys_nb.value += 1
                     print("sys_nb: " + str(sys_nb.value))
-                for key in self.keys:
-                    d[key], d['label_key'] = self.systhesis(d[key], d['lung_mask_key'])
-                    # with train_lock:
-                    print("after systhesis, label is " + str(d['label_key']) + str("\n"))
+                d[self.key], d['label_key'] = self._systhesis(d[self.key], d['lung_mask_key'])
+                # with train_lock:
+                print("after synthesis, label is " + str(d['label_key']) + str("\n"))
             else:  # No synthesis, number of original images +1
                 with train_lock:
                     ori_nb.value += 1
                     print("ori_nb: " + str(ori_nb.value))
                 # with train_lock:
-                print("No need for systhesis, label is " + str(d['label_key']) + str("\n"))
+                print("No need for synthesis, label is " + str(d['label_key']) + str("\n"))
         else:  # No synthesis, number of original images +1
             with train_lock:
                 ori_nb.value += 1
                 print("ori_nb: " + str(ori_nb.value))
 
             # with train_lock:
-            print("No need for systhesis, label is " + str(d['label_key']) + str("\n"))
+            print("No need for synthesis, label is " + str(d['label_key']) + str("\n"))
 
-        self.account_label(d['label_key'][0].item())
+        self._account_label(d['label_key'][0].item())
         return d
 
-    def random_mask(self, nb_ellipse: int = 3, type: str = "ellipse"):
+    def _random_mask(self, nb_ellipse: int = 3, type: str = "ellipse"):
         fig_: np.ndarray = np.zeros((self.image_size, self.image_size))
         # Blue color in BGR
         color = 1
@@ -339,54 +377,52 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
                 fig_ += image
             fig_[fig_ > 0] = 1
 
-            fig, ax = plt.subplots()
-            ax.imshow(fig_, cmap='gray')
-            plt.show()
-            ax.axis('off')
-            fig.savefig('/data/jjia/ssc_scoring/image_samples/polygonmask' + str(self.counter) + '.png')
-            plt.close()
+            # savefig(True, fig_, str(self.counter) + 'polygonmask.png')
 
         return fig_
 
-    def systhesis(self, img: torch.Tensor, lung_mask: Union[np.ndarray, torch.Tensor]):
+    def _systhesis(self, img: torch.Tensor, lung_mask: Union[np.ndarray, torch.Tensor]):
         img = img.numpy()
         if type(lung_mask) == torch.Tensor:
             lung_mask = lung_mask.numpy()
 
-        self.counter += 1
-        if self.counter == 100:  # update self.retp_candidate
-            self.counter = 0
-            self.retp_candidate = self.rand_affine_crop(self.retp_temp)
-            self.gg_candidate = self.rand_affine_crop(self.gg_temp)
+        if random.random() < 0.2:  # update affine every 5 images
 
-        save_img: bool = False
-        savefig(save_img, img, 'image_samples/0_ori_img_' + str(self.counter) + '.png')
-        savefig(save_img, self.retp_candidate, 'image_samples/1_retp_candidate_' + str(self.counter) + '.png')
+            # if random.random() < 0.02:  # update pattern egg every 50 images
+            self.retp_temp = self._generate_candidate(self.ret_eggs_fpath)
+            self.gg_temp = self._generate_candidate(self.gg_eggs_fpath)
+
+            self.retp_candidate = self._rand_affine_crop(self.retp_temp)
+            self.gg_candidate = self._rand_affine_crop(self.gg_temp)
+
+        save_img: bool = False  # If save the synthetic images and the intermediate images
+        savefig(save_img, img, str(self.counter) + '_0_ori_img_' + self.mode + '.png')
+        savefig(save_img, self.retp_candidate, str(self.counter) + '_1_retp_candidate.png')
 
         while (1):
-            rand_retp_mask = self.random_mask(3, type="ellipse")
-            rand_gg_mask = self.random_mask(3, type="ellipse")
+            rand_retp_mask = self._random_mask(3, type="ellipse")
+            rand_gg_mask = self._random_mask(3, type="ellipse")
 
-            savefig(save_img, rand_gg_mask, 'image_samples/2_rand_gg_mask_' + str(self.counter) + '.png')
-            savefig(save_img, rand_retp_mask, 'image_samples/3_rand_retp_mask_' + str(self.counter) + '.png')
-            savefig(save_img, lung_mask, 'image_samples/4_lung_mask_' + str(self.counter) + '.png')
+            savefig(save_img, rand_gg_mask, str(self.counter) + '_2_rand_gg_mask.png')
+            savefig(save_img, rand_retp_mask, str(self.counter) + '_3_rand_retp_mask.png')
+            savefig(save_img, lung_mask, str(self.counter) + '_4_lung_mask.png')
 
             rand_retp_mask *= lung_mask
             rand_gg_mask *= lung_mask
 
-            savefig(save_img, rand_gg_mask, 'image_samples/5_gg_mask_lung_' + str(self.counter) + '.png')
-            savefig(save_img, rand_retp_mask, 'image_samples/6_retp_mask_lung_' + str(self.counter) + '.png')
+            savefig(save_img, rand_gg_mask, str(self.counter) + '_5_gg_mask_lung.png')
+            savefig(save_img, rand_retp_mask, str(self.counter) + '_6_retp_mask_lung.png')
 
             union_mask = rand_gg_mask + rand_retp_mask
             union_mask[union_mask > 0] = 1
 
-            savefig(save_img, union_mask, 'image_samples/7_union_mask_lung_' + str(self.counter) + '.png')
+            savefig(save_img, union_mask, str(self.counter) + '_7_union_mask_lung.png')
 
             intersection_mask = rand_gg_mask * rand_retp_mask
             gg_exclude_retp = rand_gg_mask - intersection_mask
 
-            savefig(save_img, intersection_mask, 'image_samples/8_intersection_mask_lung_' + str(self.counter) + '.png')
-            savefig(save_img, gg_exclude_retp, 'image_samples/9_gg_exclude_retp_' + str(self.counter) + '.png')
+            savefig(save_img, intersection_mask, str(self.counter) + '_8_intersection_mask_lung.png')
+            savefig(save_img, gg_exclude_retp, str(self.counter) + '_9_gg_exclude_retp.png')
 
             # lung_area = np.sum(lung_mask)
             # total_dis_area = np.sum(union_mask)
@@ -400,16 +436,15 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
 
             smooth_edge = self.retp_blur
             rand_retp_mask = cv2.blur(rand_retp_mask, (smooth_edge, smooth_edge))
-            savefig(save_img, rand_retp_mask, 'image_samples/10_retp_mask_blur_' + str(self.counter) + '.png')
+            savefig(save_img, rand_retp_mask, str(self.counter) + '_10_retp_mask_blur.png')
 
             smooth_edge = self.gg_blur
             rand_gg_mask = cv2.blur(rand_gg_mask, (smooth_edge, smooth_edge))
-            savefig(save_img, rand_gg_mask, 'image_samples/11_gg_mask_blur_' + str(self.counter) + '.png')
+            savefig(save_img, rand_gg_mask, str(self.counter) + '_11_gg_mask_blur.png')
 
             smooth_edge = self.gg_blur
             intersection_mask = cv2.blur(intersection_mask, (smooth_edge, smooth_edge))
-            savefig(save_img, intersection_mask,
-                    'image_samples/11_intersection_mask_blur_' + str(self.counter) + '.png')
+            savefig(save_img, intersection_mask, str(self.counter) + '_11_intersection_mask_blur.png')
 
             rand_retp_mask_cp = copy.deepcopy(rand_retp_mask)  # recalculate scores
             rand_gg_mask_cp = copy.deepcopy(rand_gg_mask)
@@ -434,41 +469,42 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
             print("new y: ", y)
 
             if self.sampler:
-                if self.balanced(y_disext):
+                if self._balanced(y_disext):
                     break
                 else:
-                    print("not balanced, re generate image")
+                    print("not _balanced, re generate image")
             else:
                 break
 
         if np.sum(y) > 0:
             retp = rand_retp_mask * self.retp_candidate
-            savefig(save_img, retp, 'image_samples/12_retp_' + str(self.counter) + '.png')
+            savefig(save_img, retp, str(self.counter) + '_12_retp.png')
 
             img_exclude_retp_mask = (1 - rand_retp_mask) * img
             savefig(save_img, img_exclude_retp_mask,
-                    'image_samples/13_img_exclude_retp_mask_' + str(self.counter) + '.png')
+                    str(self.counter) + '_13_img_exclude_retp_mask.png')
 
             img_wt_retp = retp + img_exclude_retp_mask
-            savefig(save_img, img_wt_retp, 'image_samples/14_img_wt_retp_' + str(self.counter) + '.png')
+            savefig(save_img, img_wt_retp, str(self.counter) + '_14_img_wt_retp.png')
 
             if self.gen_gg_as_retp:
                 gg = rand_gg_mask * self.gg_candidate
-                savefig(save_img, gg, 'image_samples/12_gg_' + str(self.counter) + '.png')
+                savefig(save_img, gg, str(self.counter) + '_15_gg.png')
 
                 img_exclude_gg_mask = (1 - rand_gg_mask) * img_wt_retp
                 savefig(save_img, img_exclude_gg_mask,
-                        'image_samples/13_img_exclude_gg_mask_' + str(self.counter) + '.png')
+                        str(self.counter) + '_16_img_exclude_gg_mask.png')
 
                 img_wt_retp_gg = gg + img_exclude_gg_mask
                 savefig(save_img, img_wt_retp_gg,
-                        'image_samples/14_img_wt_retp_gg_wo_overlap' + str(self.counter) + '.png')
+                        str(self.counter) + '_17_img_wt_retp_gg_wo_overlap.png')
 
                 merge = 0.5 * (intersection_mask * img_wt_retp_gg) + 0.5 * (
                         intersection_mask * img_wt_retp)  # gg + retp
                 final = img_wt_retp_gg * (1 - intersection_mask) + merge
                 y_name = '_'.join([str(y[0]), str(y[1]), str(y[2])])
-                savefig(save_img, final, 'image_samples/15_img_wt_retp_gg_final_' + str(self.counter)+ '_'+ y_name + '.png')
+                savefig(save_img, final,
+                        str(self.counter) + '_18_img_wt_retp_gg_final_' + y_name + '.png')
 
                 # retp part
 
@@ -477,27 +513,28 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
             else:
                 smooth_edge = self.gg_blur
                 rand_gg_mask = cv2.blur(rand_gg_mask, (smooth_edge, smooth_edge))
-                savefig(save_img, rand_gg_mask, 'image_samples/15_gg_mask_blur_' + str(self.counter) + '.png')
+                savefig(save_img, rand_gg_mask, str(self.counter) + '_15_gg_mask_blur.png')
 
                 gg = copy.deepcopy(img_wt_retp)
-                savefig(save_img, gg, 'image_samples/16_gg_candidate_' + str(self.counter) + '.png')
+                savefig(save_img, gg, str(self.counter) + '_16_gg_candidate.png')
 
                 lighter_gg = copy.deepcopy(gg)
                 lighter_gg += self.gg_increase
                 gg = rand_gg_mask * lighter_gg + (1 - rand_gg_mask) * gg
-                savefig(save_img, gg, 'image_samples/17_gg_lighter_' + str(self.counter) + '.png')
+                savefig(save_img, gg, str(self.counter) + '_17_gg_lighter.png')
 
                 gg_blur = 3
                 gg = cv2.blur(gg, (gg_blur, gg_blur))
-                savefig(save_img, gg, 'image_samples/18_gg_lighter_blur_' + str(self.counter) + '.png')
+                savefig(save_img, gg, str(self.counter) + '_18_gg_lighter_blur.png')
 
                 gg = rand_gg_mask * gg
-                savefig(save_img, gg, 'image_samples/19_gg_lighter_blur_smoothed_' + str(self.counter) + '.png')
+                savefig(save_img, gg, str(self.counter) + '_19_gg_lighter_blur_smoothed.png')
 
                 img_exclude_gg_mask = (1 - rand_gg_mask) * img_wt_retp
                 img_wt_retp_gg = img_exclude_gg_mask + gg
-                savefig(save_img, img_wt_retp_gg, 'image_samples/20_img_wt_retp_gg_' + str(self.counter) + '.png')
+                savefig(save_img, img_wt_retp_gg, str(self.counter) + '_20_img_wt_retp_gg.png')
 
+            self.counter += 1
             return torch.from_numpy(img_wt_retp_gg.astype(np.float32)), torch.tensor(y.astype(np.float32))
         else:
             return torch.from_numpy(img.astype(np.float32)), torch.tensor(np.array([0, 0, 0]).astype(np.float32))

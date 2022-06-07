@@ -7,31 +7,14 @@
 import sys
 sys.path.append("..")
 
-import csv
 import os
-import threading
-import time
-from statistics import mean
-from typing import Dict, Optional, Union
-import numpy as np
-import myutil.myutil as futil
-from mymodules.path import PathPos, PathPosInit
 
-import myutil.myutil as futil
-import torch
-import torch.nn as nn
+from medutils.medutils import save_itk
 
-from mymodules.inference import record_best_preds
-from mymodules.mydata import LoadPos2Score
-from mymodules.myloss import get_loss
-from mymodules.networks import get_net_pos
-from mymodules.networks import med3d_resnet as med3d
-from mymodules.path import PathPos, PathPosInit
+from ssc_scoring.mymodules.mydata import LoadPos2Score
+from ssc_scoring.mymodules.path import PathPos
 
-from mymodules.set_args_pos import get_args
-from mymodules.tool import record_1st, record_2nd, record_GPU_info, eval_net_mae, compute_metrics
-import pandas as pd
-from monai.transforms import CastToTyped
+from ssc_scoring.mymodules.set_args_pos import get_args
 
 
 def save_corse_slice(args, ex_dt):
@@ -51,18 +34,21 @@ def save_corse_slice(args, ex_dt):
     >>> ex_dt = {1: 193, 2: 194, 3: 276, 4: 277}
     >>> save_corse_slice(args, ex_dt)
 
-    One of the use case is todo: a use case as tutorial.
+    .. Warning:
+        Following arguments need to be noted for this script:
+        total_folds, ts_level_nb
+
     """
     for fold, ex_id in ex_dt.items():
+        print(f'------fold: {fold}   ex_id: {ex_id}-------')
         args.eval_id = ex_id
         args.fold = fold
         mypath = PathPos(args.eval_id)
 
-        label_file = "dataset/SSc_DeepLearning/GohScores.xlsx"
+        label_file = mypath.label_excel_fpath  # "dataset/SSc_DeepLearning/GohScores.xlsx"
         seed = 49
-        all_loader = LoadPos2Score(0, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb, args.level_node,
-                               args.train_on_level, args.z_size, args.y_size, args.x_size, 1, 1)
-        train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
+        all_loader = LoadPos2Score(mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb)
+        valid_dataloader = all_loader.load()
 
         dataloader_dict = {'valid': valid_dataloader}
         # , 'valid': valid_dataloader, 'validaug': validaug_dataloader}
@@ -70,7 +56,7 @@ def save_corse_slice(args, ex_dt):
         for mode, loader in dataloader_dict.items():
             print(f'start save slices for {mode}')
             for batch_data in loader:  # one data, with shape (1, channel, x, y)
-                print('all paths for this data')
+                # print('all paths for this data')
                 print(batch_data['fpath2save'])
                 print('shape of image')
                 print(batch_data['image_key'].shape)
@@ -81,7 +67,7 @@ def save_corse_slice(args, ex_dt):
                     print(full_pth)
                     origin_ls = [float(i) for i in batch_data['origin_key'][1:]]
                     space_ls = [float(i) for i in batch_data['space_key'][1:]]
-                    futil.save_itk(full_pth, slice, origin_ls, space_ls)  # slice does not have origin and space along z
+                    save_itk(full_pth, slice, origin_ls, space_ls)  # slice does not have origin and space along z
 
     print('Finish all things!')
 

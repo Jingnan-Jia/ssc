@@ -20,13 +20,6 @@ class MSEHigher(nn.Module):
         self.mse = nn.MSELoss()
 
     def forward(self, y_pred, y_true):
-        """
-
-        :param y_pred:
-        :param y_true:
-        :return:
-        """
-
         if torch.sum(y_pred) > torch.sum(y_true):
             loss = self.mse(y_pred, y_true)
             print('normal loss')
@@ -53,17 +46,17 @@ class MsePlusMae(nn.Module):
 
 
 def get_loss(loss: str) -> nn.Module:
-    """
-    Get loss from its name.
+    """Return loss from its name
 
-    :param loss: The name of loss function
-    :return: The object of loss function
+    Args:
+        loss: The name of loss function
 
     Examples:
 
     >>> loss = get_loss('mse')
 
     """
+
     if loss == 'mae':
         loss_fun = nn.L1Loss()
     elif loss == 'smooth_mae':
@@ -77,4 +70,3 @@ def get_loss(loss: str) -> nn.Module:
     else:
         raise Exception("loss function is not correct " + loss)
     return loss_fun
-

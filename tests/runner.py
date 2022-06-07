@@ -29,7 +29,7 @@ if __name__ == "__main__":
         cov.report()
         # 生成HTML覆盖率报告
         cov.html_report(directory='./tests/covhtml')
-        cov.xml_report(outfile='./tests/cov_report.xml')
+        # cov.xml_report(outfile='./tests/cov_report.xml')
 
 
     if test_results.wasSuccessful():  # used in github actions to make sure actions fail when tests fails

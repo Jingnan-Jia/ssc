@@ -309,7 +309,7 @@ class Vgg11_3d(nn.Module):
     def forward(self, input):  # input would be a tuple of size (1,) if only one element is input
         if self.level_node == 0:
             x = input
-            print(f'x.shape', x.size())
+            # print(f'x.shape', x.size())
 
             x = self._fc_first(x)
         else:

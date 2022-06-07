@@ -9,7 +9,7 @@ from ssc_scoring.mymodules.mytrans import CropCorseRegiond
 import numpy as np
 from tests.utils import Compare
 import tempfile
-import myutil.myutil as futil
+import medutils.medutils as futil
 import csv
 import os
 

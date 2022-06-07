@@ -214,26 +214,35 @@ def mean_diff_plot(m1, m2,
         offset = (limitOfAgreementRange / 100.0) * 1.5
 
         ax.text(0.98, mean_diff + offset, 'Mean', ha="right", va="bottom", transform=trans, fontsize='large')
-        ax.text(0.98, mean_diff - offset, f'{mean_diff:.2f}', ha="right", va="top", transform=trans, fontsize='large')
+        ax.text(0.98, mean_diff - (2*offset), f'{mean_diff:.2f}', ha="right", va="top", transform=trans, fontsize='large')
 
         ax.text(0.98, mean_diff + (sd_limit * std_diff) + offset, f'+{sd_limit:.2f} SD', ha="right", va="bottom",
                 transform=trans, fontsize='large')
-        ax.text(0.98, mean_diff + (sd_limit * std_diff) - offset, f'{mean_diff + sd_limit * std_diff:.2f}', ha="right", va="top",
+        ax.text(0.98, mean_diff + (sd_limit * std_diff) - (2*offset), f'{mean_diff + sd_limit * std_diff:.2f}', ha="right", va="top",
                 transform=trans, fontsize='large')
 
-        ax.text(0.98, mean_diff - (sd_limit * std_diff) - offset, f'-{sd_limit:.2f} SD', ha="right", va="top",
+        ax.text(0.98, mean_diff - (sd_limit * std_diff) - (2* offset), f'-{sd_limit:.2f} SD', ha="right", va="top",
                 transform=trans, fontsize='large')
         ax.text(0.98, mean_diff - (sd_limit * std_diff) + offset, f'{mean_diff - sd_limit * std_diff:.2f}', ha="right", va="bottom",
                 transform=trans, fontsize='large')
         # ax.text(0.05, 0.9 * (2*half_ylim), 'A)', ha="left", fontsize='xx-large', transform=trans)
 
+    params = {'mathtext.default': 'regular'}
+    plt.rcParams.update(params)
+    # if ynotdiff:
+    #     ax.set_ylabel('$Obs2_{T2} \;score\;(\%)$', fontsize=15)
+    #     ax.set_xlabel('GT score (%)', fontsize=15)
+    # else:
+    #     ax.set_ylabel('$Obs2_{T2}\;-\;GT\;score\;(\%)$', fontsize=15)
+    #     ax.set_xlabel('Average score (%)', fontsize=15)
 
     if ynotdiff:
-        ax.set_ylabel('Prediction (number of slice)', fontsize=15)
-        ax.set_xlabel('Label (number of slice)', fontsize=15)
+        ax.set_ylabel('L-Net (slice number)', fontsize=15)
+        ax.set_xlabel('Ground truth (slice number)', fontsize=15)
     else:
-        ax.set_ylabel('Difference (slices)', fontsize=15)
-        ax.set_xlabel('Mean (number of slice)', fontsize=15)
+        ax.set_ylabel('L-Net - Ground truth (slices)', fontsize=15)
+        ax.set_xlabel('Average (slice number)', fontsize=15)
+
     ax.tick_params(labelsize=13)
     fig.tight_layout()
     return fig

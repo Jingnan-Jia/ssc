@@ -2,36 +2,37 @@
 # @Time    : 3/19/21 11:22 PM
 # @Author  : Jingnan
 # @Email   : jiajingnan2222@gmail.com
-import copy
 import glob
-
-import pandas as pd
-import numpy as np
 import os
 
-import scipy
-import seaborn as sns
-import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-from sklearn.metrics import cohen_kappa_score
-import ssc_scoring.mymodules.my_bland as sm
-import numpy as np
 import matplotlib
-import myutil.myutil as futil
+import numpy as np
+import pandas as pd
+import scipy
+from sklearn.metrics import cohen_kappa_score
+
+import ssc_scoring.mymodules.my_bland as sm
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 
-def get_acc_np(diag_np, total_np):
+def get_acc_np(diag_np: np.ndarray, total_np: np.ndarray) -> np.ndarray:
+    """Return accuracy for each category.
+
+    Args:
+        diag_np: Accurate number of each category
+        total_np: Total number of each category
+
+    Examples:
+        :func:`ssc_scoring.mymodules.confusion_test.confusion`
+
+    """
     acc_ls = []
     for diag, total in zip(diag_np, total_np):
         if diag == 0:
-            if total == 0:
-                acc_ls.append(0)
-            else:
-                acc_ls.append(0)
+            acc_ls.append(0)
         else:
             acc_ls.append(diag / total)
     acc = np.array(acc_ls)
@@ -47,7 +48,7 @@ def mae(df):
     Returns:
         mae, totnp
 
-    Use case:
+    Examples:
         :func:`ssc_scoring.mymodules.confusion_test.confusion`.
 
     """
@@ -69,33 +70,59 @@ def mae(df):
     total_np = np.array(total_ls)
     return mae_np, total_np
 
+
 def read_check(file_fpath=None) -> pd.DataFrame:
+    """Check the head of the loaded csv file. If no head, add proper head.
+
+    Args:
+        file_fpath: csv file full path
+
+    Returns:
+        Updated df
+
+    Examples:
+        :func:`ssc_scoring.mymodules.confusion_test.confusion`
+
+    """
     df = pd.read_csv(file_fpath)
     if df.columns[0] == "ID":
         del df["ID"]
         del df["Level"]
 
-    if df.columns[0] not in ['L1_pos', 'L1', 'L2', 'L3', 'L4', 'L5', 'disext']:
+    if df.columns[0] not in ['L1_pos', 'L1', 'L2', 'L3', 'L4', 'L5', 'disext', 'TOT']:
         df = pd.read_csv(file_fpath, header=None)
-        if len(df.columns)==5:
+        if len(df.columns) == 5:
             columns = ['L1', 'L2', 'L3', 'L4', 'L5']
-        elif len(df.columns)==3:
+        elif len(df.columns) == 3:
             columns = ['TOT', 'GG', 'RET']
         else:
             columns = ['unknown']
-        df.columns= columns
+        df.columns = columns
 
     return df
 
 
+def confusion(label_file: str, pred_file: str, bland_in_1_mean_std=None, adap_markersize=1) -> dict:
+    """
 
-def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1):
+    Args:
+        label_file: Full path for label
+        pred_file: Full path for pred
+        bland_in_1_mean_std:
+        adap_markersize:
+
+    Returns:
+        A dict include all metrics
+
+    Examples:
+        :func:`ssc_scoring.mymodules.tool.compute_metrics` and :func:`ssc_scoring.compute_metrics.metrics`
+
+    """
     print(f"Start the save of confsion matrix plot and csv for label: {label_file} and pred: {pred_file}")
 
     df_label = read_check(file_fpath=label_file)
     df_pred = read_check(file_fpath=pred_file)
     print('len_df_label', len(df_label))
-
 
     # if len(df_label.columns) == 5:
     #     df_pred -= 32
@@ -105,14 +132,13 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
     lower_y_ls, upper_y_ls = [], []
     lower_x_ls, upper_x_ls = [], []
 
-    if bland_in_1_mean_std is not None :
+    if bland_in_1_mean_std is not None:
         fig = plt.figure(figsize=(6, 4))
         fig_2 = plt.figure(figsize=(5, 4))
         row_nb, col_nb = 1, 1
     else:
         fig = plt.figure(figsize=(15, 4))
-        fig_2 = plt.figure(figsize=(15, 6))
-
+        fig_2 = plt.figure(figsize=(15, 5))
 
         if len(df_label.columns) == 3:
             row_nb, col_nb = 1, 3
@@ -125,8 +151,8 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
 
     basename = os.path.dirname(pred_file)
     prefix = pred_file.split("/")[-1].split("_")[0]
-    import matplotlib.cm as cm
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22',
+              '#17becf']
 
     for plot_id, column in enumerate(df_label.columns):
         label = df_label[column].to_numpy().reshape(-1, 1)
@@ -138,13 +164,13 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
             ax_2 = fig_2.add_subplot(row_nb, col_nb, 1)
 
         else:
-            ax = fig.add_subplot(row_nb, col_nb, plot_id+1)
-            ax_2 = fig_2.add_subplot(row_nb, col_nb, plot_id+1)
+            ax = fig.add_subplot(row_nb, col_nb, plot_id + 1)
+            ax_2 = fig_2.add_subplot(row_nb, col_nb, plot_id + 1)
 
         # f, ax = plt.subplots(1, figsize=(8, 5))
         scatter_kwds = {'c': colors[plot_id], 'label': column}
 
-        if bland_in_1_mean_std is None or plot_id == len(df_label.columns)-1:
+        if bland_in_1_mean_std is None or plot_id == len(df_label.columns) - 1:
             if bland_in_1_mean_std is not None:
                 label_all = df_label.to_numpy().flatten().reshape(-1, 1)
                 pred_all = df_pred.to_numpy().flatten().reshape(-1, 1)
@@ -152,17 +178,16 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
                 mean_diff = np.mean(diffs_all)
                 std_diff = np.std(diffs_all)
                 bland_in_1_mean_std = {"mean": mean_diff, "std": std_diff}
-            f = sm.mean_diff_plot(pred, label, ax=ax, scatter_kwds=scatter_kwds, bland_in_1_mean_std=bland_in_1_mean_std,
+            f = sm.mean_diff_plot(pred, label, ax=ax, scatter_kwds=scatter_kwds,
+                                  bland_in_1_mean_std=bland_in_1_mean_std,
                                   adap_markersize=adap_markersize)
             f_2 = sm.mean_diff_plot(pred, label, ax=ax_2, sd_limit=0, scatter_kwds=scatter_kwds,
-                                  bland_in_1_mean_std=bland_in_1_mean_std,
-                                  adap_markersize=adap_markersize, ynotdiff=True)
-
+                                    bland_in_1_mean_std=bland_in_1_mean_std,
+                                    adap_markersize=adap_markersize, ynotdiff=True)
 
             if bland_in_1_mean_std is None:
                 ax.set_title(column, fontsize=15)
                 ax_2.set_title(column, fontsize=15)
-
 
             # else:
             #     ax.set_title("All", fontsize=15)
@@ -173,7 +198,7 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
 
         else:
 
-            f = sm.mean_diff_plot(pred, label, ax=ax,sd_limit=0, scatter_kwds=scatter_kwds,
+            f = sm.mean_diff_plot(pred, label, ax=ax, sd_limit=0, scatter_kwds=scatter_kwds,
                                   bland_in_1_mean_std=bland_in_1_mean_std, adap_markersize=adap_markersize)
 
             f_2 = sm.mean_diff_plot(pred, label, ax=ax_2, sd_limit=0, scatter_kwds=scatter_kwds,
@@ -203,13 +228,10 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
         print(f"mean for {column} is {mean}")
         print(f"std for {column} is {std}")
 
-
-
         if len(df_label.columns) == 3:
             kappa = cohen_kappa_score(label.astype(int), pred.astype(int), weights='linear',
                                       labels=np.array(list(range(100))))
             print(f"weighted kappa for {column} is {kappa}")
-
 
             pred[pred < 0] = 0
             pred[pred > 100] = 100
@@ -265,7 +287,6 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
 
         print("Finish confsion matrix plot and csv of ", column)
 
-
     # plot the bland-altman plot of all data
     if bland_in_1_mean_std:
         label = df_label.to_numpy().flatten().reshape(-1, )
@@ -276,7 +297,7 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
         slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(label, pred)
         x_reference = np.array([0, 256])
         print('linear regression m, b:', m, b)
-        print('linear regression m, b, r^2:', slope, intercept, r_value**2)
+        print('linear regression m, b, r^2, p:', slope, intercept, r_value ** 2, p_value)
 
         diff = pred.astype(int) - label.astype(int)
         abs_diff = np.abs(diff)
@@ -285,13 +306,29 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
         print('MAE for all is: ', ave_mae_all)
         print('STD of MAE for all is: ', std_mae_all)
 
-
-        ax_2.plot(x_reference, m * x_reference + b, '--', color='black', linewidth=1) # light gray
-        ax_2.plot(x_reference, x_reference, '-', color='black', linewidth=1) # light gray
+        ax_2.plot(x_reference, m * x_reference + b, '--', color='black', linewidth=1)  # light gray
+        ax_2.plot(x_reference, x_reference, '-', color='black', linewidth=1)  # light gray
         # ax_2.text(0.1, 0.7, '---  Regression line',
         #           ha="left", fontsize='large', transform=ax_2.transAxes)
-        ax_2.text(0.1, 0.7, f'--  Regression line\ny = {m:.2f}x + {b:.2f}\nR\N{SUPERSCRIPT TWO} = {r_value**2: .2f}',
+        ax_2.text(0.1, 0.6, f'------\n'
+                            f'——\n'
+                            f'y\n'
+                            f'R\N{SUPERSCRIPT TWO}\n'
+                            f'P',
                   ha="left", fontsize='large', transform=ax_2.transAxes)
+        if p_value < 0.01:
+            ax_2.text(0.16, 0.6, f'    Regression line\n'
+                                 f'    Identity line\n'
+                                 f'= {m:.2f}x + {b:.2f}\n'
+                                 f'= {r_value ** 2:.2f}\n'
+                                 f'< 0.01',
+                      ha="left", fontsize='large', transform=ax_2.transAxes)
+        else:
+            ax_2.text(0.16, 0.6, f'Regression line\n'
+                                 f'= {m:.2f}x + {b:.2f}\n'
+                                 f'= {r_value ** 2:.2f}\n'
+                                 f'= {p_value}',
+                      ha="left", fontsize='large', transform=ax_2.transAxes)
         # ax_2.text(0.05, 0.9, 'B)', ha="left", fontsize='xx-large', transform=ax_2.transAxes)
     else:
         for plot_id, column in enumerate(df_label.columns):
@@ -303,8 +340,8 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
             m, b = np.polyfit(label, pred, 1)
             slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(label, pred)
             x_reference = np.array([0, 256])
-            print(column,'linear regression m, b:', m, b)
-            print(column,'linear regression m, b, r^2:', slope, intercept, r_value ** 2)
+            print(column, 'linear regression m, b:', m, b)
+            print(column, 'linear regression m, b, r^2:', slope, intercept, r_value ** 2)
 
             ax_2.plot(x_reference, m * x_reference + b, '--', color='gray')  # light gray
             # ax_2.text(0.1, 0.7, '---  Regression line',
@@ -333,7 +370,7 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
 
     for i in range(row_nb * col_nb):
         ax = fig.add_subplot(row_nb, col_nb, i + 1)
-        ax.set_ylim(-common_y *1.2, common_y *1.2)
+        ax.set_ylim(-common_y * 1.2, common_y * 1.2)
 
         ax_2 = fig_2.add_subplot(row_nb, col_nb, i + 1)
 
@@ -354,8 +391,6 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
             ax.legend(loc="lower left")
             ax_2.legend(loc="lower right")
 
-
-
     # f.suptitle(prefix.capitalize() + " Bland-Altman Plot", fontsize=26)
     f.tight_layout()
     f.savefig(basename + '/' + prefix + '_bland_altman.png')
@@ -366,7 +401,7 @@ def confusion(label_file, pred_file, bland_in_1_mean_std=None, adap_markersize=1
     f_2.savefig(basename + '/' + prefix + '_label_pred_scatter.png')
     plt.close(f_2)
 
-    if ('valid' in pred_file) and (len(df_label.columns) ==3):
+    if ('valid' in pred_file) and (len(df_label.columns) == 3):
         out_dt['valid_ave_Acc_all'] = 0
         out_dt['valid_ave_MAE_all'] = 0
         out_dt['valid_WKappa_all'] = 0

@@ -9,18 +9,20 @@ import pandas as pd
 import SimpleITK as sitk
 import numpy as np
 import os
-from myutil.myutil import get_all_ct_names, load_itk, save_itk
+from medutils.medutils import load_itk
 import matplotlib.pyplot as plt
 import csv
 
 
 def clip(x_np, min, max):
+    """Pixel value truncation"""
     x_np[x_np > max] = max
     x_np[x_np < min] = min
     return x_np
 
 
 def bbox2(img):
+    """Return the box boundary for valuable voxels."""
     min = np.min(img)
     rows = np.max(img, axis=1)
     cols = np.max(img, axis=0)
@@ -28,6 +30,7 @@ def bbox2(img):
     cmin, cmax = np.where(cols>min)[0][[0, -1]]
 
     return rmin, rmax, cmin, cmax
+
 
 def main():
     abs_dir_path = os.path.dirname(os.path.realpath(__file__))

@@ -1,12 +1,17 @@
 # merge the results from 4 folds
+import sys
+sys.path.append("..")
+
 from typing import Sequence
 
 import numpy as np
 import pandas as pd
 import os
-from mymodules.confusion_test import confusion
-import myutil.myutil as futil
+from ssc_scoring.mymodules.confusion_test import confusion
+from medutils.medutils import icc
 from ssc_scoring.compute_metrics import metrics
+
+
 # pred_1 = "/data/jjia/ssc_scoring/observer_agreement/16_patients/LKT2_16patients.csv"
 #
 # label_1 = "/data/jjia/ssc_scoring/ground_truth_17_patients.csv" ground_truth_16patients
@@ -26,13 +31,13 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
 
     Examples:
 
-    >>> run_pos = True
-    >>> ex_ls = [193, 194, 276, 277]
-    >>> main(run_pos, ex_ls)
+        >>> run_pos = True
+        >>> ex_ls = [193, 194, 276, 277]
+        >>> main(run_pos, ex_ls)
 
     """
     if run_pos:
-        from mymodules.path import PathPos as Path
+        from ssc_scoring.mymodules.path import PathPos as Path
         label_postfix = "_label"
         pred_postfix = "_pred"
         # ex_ls = [51, 52, 275, 274]
@@ -45,7 +50,7 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
         adap_markersize = False
 
     else:
-        from mymodules.path import PathScore as Path
+        from ssc_scoring.mymodules.path import PathScore as Path
         label_postfix = "_label"
         pred_postfix = "_pred_int_end5"
         # ex_ls = [1585, 1586, 1587, 1588]
@@ -99,8 +104,8 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
         pred_all_path =  label_all_dir+ '/' + mode + pred_postfix + ".csv"
 
         metrics(pred_all_path, label_all_path, bland_in_1, adap_markersize)
-        icc = futil.icc(label_all_path, pred_all_path)
-        print('icc: ', icc)
+        icc_value = icc(label_all_path, pred_all_path)
+        print('icc: ', icc_value)
 
 
 if __name__ == "__main__":
