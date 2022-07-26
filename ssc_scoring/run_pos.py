@@ -149,6 +149,9 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
     ave_loss = total_loss / batch_idx
     ave_loss_mae = total_loss_mae / batch_idx
     print("mode:", mode, "loss: ", ave_loss, "loss_mae: ", ave_loss_mae)
+    log_metric(mode + 'LossEpoch', ave_loss, epoch_idx)
+    log_metric(mode + 'MAEEpoch', ave_loss_mae, epoch_idx)
+
 
     if not os.path.isfile(loss_path):
         with open(loss_path, 'a') as csv_file:

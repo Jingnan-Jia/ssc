@@ -58,7 +58,7 @@ scontrol write batch_script "${job_id}" ssc_scoring/current_script.sh  # for the
 
 git add -A
 sleep 2  # avoid error: fatal: Could not parse object (https://github.com/Shippable/support/issues/2932)
-git commit -m "jobid is ${job_id}"
+git commit -m "ssc_scoring, jobid is ${job_id}"
 sleep 2
 git push origin master
 sleep 2
