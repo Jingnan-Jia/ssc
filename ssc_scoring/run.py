@@ -108,7 +108,7 @@ def start_run(args, mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, 
             batch_x, batch_y = data['image_key'], data['image_key']
         else:
             batch_x, batch_y = data['image_key'], data['label_key']
-        batch_y = torch.round(batch_y / 25) * 25
+        # batch_y = torch.round(batch_y / 25) * 25
         print(f'batch_y is: {batch_y}')
         t1 = time.time()
         t_load_data.append(t1 - t0)
@@ -253,10 +253,10 @@ def train(args: Namespace, id_: int, log_dict: Dict[str, LogType]) -> Dict[str, 
     net_parameters = count_parameters(net)
     net_parameters = str(round(net_parameters / 1024 / 1024, 2))
     log_param('net_parameters_M', net_parameters)
-    log_dict['net_parameters'] = net_parameters
+    # log_dict['net_parameters'] = net_parameters
     label_file = mypath.label_excel_fpath # "dataset/SSc_DeepLearning/GohScores.xlsx"  # labels are from here
     seed = 49  # for split of  cross-validation
-    log_dict['data_shuffle_seed'] = seed
+    # log_dict['data_shuffle_seed'] = seed
     log_param('data_shuffle_seed', seed)
 
     net = net.to(device)

@@ -13,12 +13,14 @@ def get_args():
     # Common args with set_args.py
     parser.add_argument('--mode', choices=('train', 'infer', 'continue_train'), help='mode', type=str, default='train')
     parser.add_argument('--eval_id', help='id used for inference, or continue_train', type=int, default=0)
-    parser.add_argument('--net', choices=('vgg11_3d', 'r3d_resnet', 'cnn3fc1', 'cnn4fc2', 'cnn5fc2', 'cnn6fc2',
-                                          'cnn2fc1', 'cnn3fc2'), help='network name', type=str, default='r3d_18')
+    parser.add_argument('--net', choices=('vgg11_3d','vgg16_3d','vgg19_3d', 'r3d_resnet', 'cnn3fc1', 'cnn4fc2', 'cnn5fc2', 'cnn6fc2',
+                                          'cnn2fc1', 'cnn3fc2', 'r3d_18'), help='network name', type=str, default='r3d_18')
     parser.add_argument('--fc2_nodes', help='the number of nodes of fc2 layer, original is 4096', type=int,
                         default=1024)
     parser.add_argument('--fc1_nodes', help='the number of nodes of fc2 layer, original is 4096', type=int,
                         default=1024)
+    parser.add_argument('--base', help='the number of nodes of fc2 layer, original is 4096', type=int,
+                        default=8)
     parser.add_argument('--total_folds', choices=(4, 5), help='4-fold training', type=int, default=4)
     parser.add_argument('--fold', choices=(1, 2, 3, 4), help='1 to 4', type=int, default=1)
     parser.add_argument('--valid_period', help='how many epochs between 2 validation', type=int, default=5)
@@ -34,7 +36,6 @@ def get_args():
     parser.add_argument('--outfile', help='output file when running by script instead of pycharm', type=str, default='None')
     parser.add_argument('--hostname', help='hostname of the server', type=str, default='None')
     parser.add_argument('--remark', help='comments on this experiment', type=str, default='None')
-
     # Exclusive args
     parser.add_argument('--train_on_level', choices=(1, 2, 3, 4, 5, 0), help='level 0 denotes all', type=int,
                         default=0)

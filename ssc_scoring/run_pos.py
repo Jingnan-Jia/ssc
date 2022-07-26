@@ -17,9 +17,6 @@ from medutils.medutils import count_parameters
 import torch
 import torch.nn as nn
 import mlflow
-from mlflow import log_param, log_params, log_metric, log_metrics
-from fvcore.nn import FlopCountAnalysis
-
 from ssc_scoring.mymodules.inference import record_best_preds
 from ssc_scoring.mymodules.mydata import LoadPos
 from ssc_scoring.mymodules.myloss import get_loss
@@ -29,8 +26,8 @@ from ssc_scoring.mymodules.set_args_pos import get_args
 from ssc_scoring.mymodules.tool import record_1st, record_2nd, record_gpu_info, eval_net_mae, compute_metrics
 # from kd_med import kd_loss, PreTrainedEnc, GetEncSConv
 import kd_med
+from mlflow import log_metric, log_param, log_params
 
-FLOPs_done = False
 
 def gpu_info(outfile):  # need to be in the main file because it will be executed by another thread
     gpu_name, gpu_usage, gpu_utis = record_gpu_info(outfile)
@@ -75,19 +72,6 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
         batch_x = data['image_key'].to(device)
         # print('batch_x.shape', batch_x.size())
         batch_y = data['label_in_patch_key'].to(device)
-        global FLOPs_done
-        if not FLOPs_done:
-            net.eval()
-            net_flops = FlopCountAnalysis(net, batch_x)
-            flops = net_flops.total()
-            print(f"net_flops: {flops}")
-            log_param('FLOPs', flops)
-            FLOPs_done = True
-            if mode == 'train' or mode == 'validaug':
-                net.train()
-            else:
-                net.eval()
-
         if args.kd == 'dist':  # kd train
             no_cuda = not torch.cuda.is_available()
             loss = kd_med.kd_loss(batch_x, enc_t, net, no_cuda)
@@ -183,7 +167,7 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
 
             print('this model is the best one, save it. epoch id: ', epoch_idx)
             torch.save(net.state_dict(), mypath.model_fpath)
-            # torch.save(net, mypath.model_wt_structure_fpath)
+            torch.save(net, mypath.model_wt_structure_fpath)
             print('save_successfully at ', mypath.model_fpath)
         return valid_mae_best
     else:
@@ -225,22 +209,19 @@ def train(id: int, log_dict: dict, args):
         net = kd_med.EncPlusConv(batch_x, enc_t, enc_s, 3, no_cuda).get()
 
     else:
-        net: torch.nn.Module = get_net_pos(name=args.net, nb_cls=outs, level_node=args.level_node, pretrained=args.pretrained)
+        net: torch.nn.Module = get_net_pos(name=args.net, nb_cls=outs, level_node=args.level_node, pretrained=args.pretrained, base=args.base)
         enc_t = None
     print('net:', net)
 
     net_parameters = count_parameters(net)
     net_parameters = str(round(net_parameters / 1024 / 1024, 2))
-    log_dict['net_parameters'] = net_parameters
+    # log_dict['net_parameters'] = net_parameters
     log_param('net_parameters_M', net_parameters)
-
 
     label_file = mypath.label_excel_fpath  # "dataset/SSc_DeepLearning/GohScores.xlsx"
     log_dict['label_file'] = label_file
-    log_param('label_file', label_file)
     seed = 49
     log_dict['data_shuffle_seed'] = seed
-    log_param('data_shuffle_seed', seed)
 
     all_loader = LoadPos(args.resample_z, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb,
                          args.level_node,
@@ -281,7 +262,9 @@ def train(id: int, log_dict: dict, args):
         log_dict = compute_metrics(mypath, PathPos(args.eval_id), log_dict,
                                    modes=['train', 'valid', 'test', 'validaug'])
         log_params(log_dict)
+
     # data_dt['train']['ds'].shutdown()
+
     print('Finish all things!')
     return log_dict
 
@@ -294,13 +277,8 @@ if __name__ == "__main__":
     id: int = record_1st('pos', args)  # write super parameters from set_args.py to record file.
 
     with mlflow.start_run(run_name=str(id), tags={"mlflow.note.content": args.remark}):
-        # p1 = threading.Thread(target=record_cgpu_info, args=(args.outfile,))
-        # p1.start()
-
         log_params(vars(args))
-        log_dict = {}  # a global dict to store variables saved to log files
+        log_dict: Dict = {}  # a global dict to store variables saved to log files
 
-        log_param('ID', id)
         log_dict = train(id, log_dict, args)
-        record_2nd('pos', current_id=id, log_dict=log_dict,
-                   args=args)  # write other parameters and metrics to record file.
+        record_2nd('pos', current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.
