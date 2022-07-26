@@ -222,9 +222,12 @@ def train(id: int, log_dict: dict, args):
     log_param('net_parameters_M', net_parameters)
 
     label_file = mypath.label_excel_fpath  # "dataset/SSc_DeepLearning/GohScores.xlsx"
-    log_dict['label_file'] = label_file
+    # log_dict['label_file'] = label_file
+    log_param('label_file', label_file)
+
     seed = 49
-    log_dict['data_shuffle_seed'] = seed
+    # log_dict['data_shuffle_seed'] = seed
+    log_param('data_shuffle_seed', seed)
 
     all_loader = LoadPos(args.resample_z, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb,
                          args.level_node,
