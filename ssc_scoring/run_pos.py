@@ -21,9 +21,10 @@ from ssc_scoring.mymodules.inference import record_best_preds
 from ssc_scoring.mymodules.mydata import LoadPos
 from ssc_scoring.mymodules.myloss import get_loss
 from ssc_scoring.mymodules.networks import get_net_pos, get_net_pos_enc
-from ssc_scoring.mymodules.path import PathPos
 from ssc_scoring.mymodules.set_args_pos import get_args
 from ssc_scoring.mymodules.tool import record_1st, record_2nd, record_cgpu_info, eval_net_mae, compute_metrics
+from ssc_scoring.mymodules.path import PathPosInit, PathPos
+
 # from kd_med import kd_loss, PreTrainedEnc, GetEncSConv
 import kd_med
 from mlflow import log_metric, log_metrics, log_param, log_params
@@ -318,7 +319,7 @@ if __name__ == "__main__":
         p1.start()
 
         for fold in [1, 2, 3, 4]:
-            id = record_1st('pos', args)  # write super parameters from set_args.py to record file.
+            id = record_1st(PathPosInit().record_file)  # write super parameters from set_args.py to record file.
             with mlflow.start_run(run_name=str(id) + '_fold_' + str(fold), tags={"mlflow.note.content": f"fold: {fold}"}, nested=True):
                 args.fold = fold
                 args.id = id  # do not need to pass id seperately to the latter function

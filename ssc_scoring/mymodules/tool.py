@@ -23,6 +23,7 @@ import threading
 from mlflow import log_metric, log_metrics, log_param, start_run, end_run, log_params, log_artifact
 import psutil
 import sys
+from pathlib import Path
 
 def try_func(func):
     def _try_fun(*args, **kwargs):
@@ -340,7 +341,7 @@ def get_df_id(record_file: str) -> Tuple[pd.DataFrame, int]:
     return df, new_id
 
 
-def record_1st(task: str, args: argparse.Namespace) -> int:
+def record_1st_old(task: str, args: argparse.Namespace) -> int:
     """First record in this experiment.
 
     Args:
@@ -387,6 +388,25 @@ def record_1st(task: str, args: argparse.Namespace) -> int:
             df = fill_running(df)  # fill the state information for other experiments
             df = correct_type(df)  # aviod annoying thing like: ID=1.00
             write_and_backup(df, record_file, mypath)
+    return new_id
+
+def record_1st(record_file) -> int:
+    Path(record_file).parent.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(record_file + ".lock")  # lock the file, avoid other processes write other things
+    with lock:  # with this lock,  open a file for exclusive access
+        with open(record_file, 'a'):
+            df, new_id = get_df_id(record_file)
+            idatime = {'ID': new_id}
+            if len(df) == 0:  # empty file
+                df = pd.DataFrame([idatime])  # need a [] , or need to assign the index for df
+            else:
+                index = df.index.to_list()[-1]  # last index
+                for key, value in idatime.items():  # write new line
+                    df.at[index + 1, key] = value  #
+
+            df.to_csv(record_file, index=False)
+            shutil.copy(record_file, record_file + "_cp")
+
     return new_id
 
 
