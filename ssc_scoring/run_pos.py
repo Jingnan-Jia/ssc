@@ -307,7 +307,7 @@ if __name__ == "__main__":
     mlflow.set_experiment("ssc_scoring_pos")
 
     args = get_args()
-    id: int = record_1st('pos', args)  # write super parameters from set_args.py to record file.
+    id = record_1st(PathPosInit().record_file)  # write super parameters from set_args.py to record file.
 
     with mlflow.start_run(run_name=str(id), tags={"mlflow.note.content": args.remark}):
         args.id = id  # do not need to pass id seperately to the latter function
