@@ -72,21 +72,20 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
     total_loss_mae = 0
 
     t0 = time.time()
-    t_load_data, t_train_per_step = [], []
+    # t_load_data, t_train_per_step = [], []
     data_idx = 0
     dataloader = dataloader_dt['dl']
     if mode=='train':
         dataset = dataloader_dt['ds']
+    EPOCHS_RECORDING_TIME = 2
     for data in dataloader:
         # print('data_idx:', data_idx)
         data_idx += 1
-
-        t1 = time.time()
-        t_load_data.append(t1 - t0)
-        # print(f't_load_data:{t1 - t0}')
+        if epoch_idx < EPOCHS_RECORDING_TIME:  # only show first 3 epochs' data loading time
+            t1 = time.time()
+            log_metric('TLoad', t1 - t0, data_idx + epoch_idx * len(dataloader))
 
         batch_x = data['image_key'].to(device)
-        # print('batch_x.shape', batch_x.size())
         batch_y = data['label_in_patch_key'].to(device)
 
         global FLOPs_done
@@ -157,10 +156,11 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
                 print('loss:', loss.item())
                 print('pred:', (pred / sp_z).clone().detach().cpu().numpy())
                 print('label:', (batch_y / sp_z).clone().detach().cpu().numpy())
-        t2 = time.time()
-        t_train_per_step.append(t2 - t1)
-        # print(f't_tr_step:{t2 - t1}')
-        t0 = t2  # reset the t0
+
+        if epoch_idx < EPOCHS_RECORDING_TIME:
+            t2 = time.time()
+            log_metric('TUpdateWBatch', t2 - t1, data_idx + epoch_idx * len(dataloader))
+            t0 = t2  # reset the t0
 
         total_loss += loss.item()
         total_loss_mae += loss_mae.item()
@@ -171,10 +171,10 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
         #     p1.start()
     # if mode=='train':
     #     dataset.update_cache()
-    t_load_data, t_train_per_step = mean(t_load_data), mean(t_train_per_step)
-    if "t_load_data" not in log_dict:
-        log_dict.update({"t_load_data": t_load_data, "t_train_per_step": t_train_per_step})
-    print({"t_load_data": t_load_data, "t_train_per_step": t_train_per_step})
+    # t_load_data, t_train_per_step = mean(t_load_data), mean(t_train_per_step)
+    # if "t_load_data" not in log_dict:
+    #     log_metrics({"t_load_data": t_load_data, "t_train_per_step": t_train_per_step})
+    # print({"t_load_data": t_load_data, "t_train_per_step": t_train_per_step})
 
     ave_loss = total_loss / batch_idx
     ave_loss_mae = total_loss_mae / batch_idx
