@@ -23,15 +23,30 @@ from ssc_scoring.mymodules.myloss import get_loss
 from ssc_scoring.mymodules.networks import get_net_pos, get_net_pos_enc
 from ssc_scoring.mymodules.path import PathPos
 from ssc_scoring.mymodules.set_args_pos import get_args
-from ssc_scoring.mymodules.tool import record_1st, record_2nd, record_gpu_info, eval_net_mae, compute_metrics
+from ssc_scoring.mymodules.tool import record_1st, record_2nd, record_cgpu_info, eval_net_mae, compute_metrics
 # from kd_med import kd_loss, PreTrainedEnc, GetEncSConv
 import kd_med
-from mlflow import log_metric, log_param, log_params
+from mlflow import log_metric, log_metrics, log_param, log_params
+from fvcore.nn import FlopCountAnalysis
+FLOPs_done = False
+
+def try_func(func):
+    def _try_fun(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as err:
+            print(err, file=sys.stderr)
+            pass
+    return _try_fun
+
+
+log_metric = try_func(log_metric)
+log_metrics = try_func(log_metrics)
 
 
 def gpu_info(outfile):  # need to be in the main file because it will be executed by another thread
-    gpu_name, gpu_usage, gpu_utis = record_gpu_info(outfile)
-    log_dict['gpuname'], log_dict['gpu_mem_usage'], log_dict['gpu_util'] = gpu_name, gpu_usage, gpu_utis
+    gpu_name, gpu_usage, gpu_utis = record_cgpu_info(outfile)
+    # log_dict['gpuname'], log_dict['gpu_mem_usage'], log_dict['gpu_util'] = gpu_name, gpu_usage, gpu_utis
 
     return None
 
@@ -72,6 +87,20 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
         batch_x = data['image_key'].to(device)
         # print('batch_x.shape', batch_x.size())
         batch_y = data['label_in_patch_key'].to(device)
+
+        global FLOPs_done
+        if not FLOPs_done:
+            net.eval()
+            net_flops = FlopCountAnalysis(net, batch_x)
+            flops = net_flops.total()
+            print(f"net_flops: {flops}")
+            log_param('FLOPs', flops)
+            FLOPs_done = True
+            if mode == 'train':
+                net.train()
+            else:
+                net.eval()
+
         if args.kd == 'dist':  # kd train
             no_cuda = not torch.cuda.is_available()
             loss = kd_med.kd_loss(batch_x, enc_t, net, no_cuda)
@@ -136,9 +165,9 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
         total_loss_mae += loss_mae.item()
         batch_idx += 1
 
-        if 'gpuname' not in log_dict:
-            p1 = threading.Thread(target=gpu_info, args=(args.outfile,))
-            p1.start()
+        # if 'gpuname' not in log_dict:
+        #     p1 = threading.Thread(target=gpu_info, args=(args.outfile,))
+        #     p1.start()
     # if mode=='train':
     #     dataset.update_cache()
     t_load_data, t_train_per_step = mean(t_load_data), mean(t_train_per_step)
@@ -192,7 +221,8 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
 #     return net
 
 
-def train(id: int, log_dict: dict, args):
+def train(args):
+    id = args.id
     mypath = PathPos(id)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     if args.train_on_level or args.level_node:
@@ -218,15 +248,12 @@ def train(id: int, log_dict: dict, args):
 
     net_parameters = count_parameters(net)
     net_parameters = str(round(net_parameters / 1024 / 1024, 2))
-    # log_dict['net_parameters'] = net_parameters
     log_param('net_parameters_M', net_parameters)
 
     label_file = mypath.label_excel_fpath  # "dataset/SSc_DeepLearning/GohScores.xlsx"
-    # log_dict['label_file'] = label_file
     log_param('label_file', label_file)
 
     seed = 49
-    # log_dict['data_shuffle_seed'] = seed
     log_param('data_shuffle_seed', seed)
 
     all_loader = LoadPos(args.resample_z, mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb,
@@ -245,7 +272,7 @@ def train(id: int, log_dict: dict, args):
     loss_fun = get_loss(args.loss)
     loss_fun_mae = nn.L1Loss()
     lr = 1e-4
-    log_dict['lr'] = lr
+    log_param('lr', lr)
     opt = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=args.weight_decay)
     epochs = 0 if args.mode == 'infer' else args.epochs
     for i in range(epochs):  # 20000 epochs
@@ -265,14 +292,13 @@ def train(id: int, log_dict: dict, args):
     #                    'test': test_dataloader}
     if args.kd != 'dist':
         record_best_preds(net, data_dt, mypath, args)
-        log_dict = compute_metrics(mypath, PathPos(args.eval_id), log_dict,
+        log_dict = compute_metrics(mypath, PathPos(args.eval_id), {},
                                    modes=['train', 'valid', 'test', 'validaug'])
         log_params(log_dict)
 
     # data_dt['train']['ds'].shutdown()
 
     print('Finish all things!')
-    return log_dict
 
 
 if __name__ == "__main__":
@@ -283,8 +309,24 @@ if __name__ == "__main__":
     id: int = record_1st('pos', args)  # write super parameters from set_args.py to record file.
 
     with mlflow.start_run(run_name=str(id), tags={"mlflow.note.content": args.remark}):
-        log_params(vars(args))
-        log_dict: Dict = {}  # a global dict to store variables saved to log files
+        args.id = id  # do not need to pass id seperately to the latter function
+        tmp_args_dt = vars(args)
+        tmp_args_dt['fold'] = 'all'
+        log_params(tmp_args_dt)
 
-        log_dict = train(id, log_dict, args)
-        record_2nd('pos', current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.
+        p1 = threading.Thread(target=record_cgpu_info, args=(args.outfile, ))
+        p1.start()
+
+        for fold in [1, 2, 3, 4]:
+            id = record_1st('pos', args)  # write super parameters from set_args.py to record file.
+            with mlflow.start_run(run_name=str(id) + '_fold_' + str(fold), tags={"mlflow.note.content": f"fold: {fold}"}, nested=True):
+                args.fold = fold
+                args.id = id  # do not need to pass id seperately to the latter function
+                tmp_args_dt = vars(args)
+                log_params(tmp_args_dt)
+
+                train(args)
+        # record_2nd('pos', current_id=id, log_dict=log_dict, args=args)  # write other parameters and metrics to record file.
+
+        p1.do_run = False  # stop the thread
+        p1.join()

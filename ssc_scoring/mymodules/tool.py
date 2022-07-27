@@ -20,8 +20,23 @@ from torch.utils.data import WeightedRandomSampler
 from ssc_scoring.mymodules.confusion_test import confusion
 from ssc_scoring.mymodules.path import PathScoreInit, PathPosInit, PathScore, PathPos
 import threading
-from mlflow import log_metric, log_param, start_run, end_run, log_params, log_artifact
+from mlflow import log_metric, log_metrics, log_param, start_run, end_run, log_params, log_artifact
 import psutil
+import sys
+
+def try_func(func):
+    def _try_fun(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as err:
+            print(err, file=sys.stderr)
+            pass
+    return _try_fun
+
+
+log_metric = try_func(log_metric)
+log_metrics = try_func(log_metrics)
+
 
 def sampler_by_disext(tr_y, sys_ratio=None) -> WeightedRandomSampler:
     """Balanced sampler according to score distribution of disext.
@@ -578,20 +593,18 @@ def record_cgpu_info(outfile) -> Tuple:
         pid = os.getpid()
         python_process = psutil.Process(pid)
 
-        jobid_gpuid = outfile.split('-')[-1]
-        tmp_split = jobid_gpuid.split('_')[-1]
-        if len(tmp_split) == 2:
-            gpuid = tmp_split[-1]
+        jobid_gpuid = outfile.split('-')[-1]  # Input: outfile: “slurm-432434_0”  Return: ”432434_0“
+        tmp_split = jobid_gpuid.split('_')[-1]  # Input: jobid_gpuid: “432434_0”  Return: “0”
+        if len(tmp_split) == 2:  # I can not remember why I wrote this line ...
+            gpuid = int(tmp_split[-1])
         else:
-            gpuid = 0
+            gpuid = int(tmp_split)
         nvidia_smi.nvmlInit()
         handle = nvidia_smi.nvmlDeviceGetHandleByIndex(gpuid)
         gpuname = nvidia_smi.nvmlDeviceGetName(handle)
         gpuname = gpuname.decode("utf-8")
         log_param('gpuname', gpuname)
-        # log_dict['gpuname'] = gpuname
 
-        # log_dict['gpu_mem_usage'] = gpu_mem_usage
         # gpu_util = 0
         i = 0
         period = 2  # 2 seconds
