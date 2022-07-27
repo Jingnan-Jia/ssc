@@ -93,7 +93,7 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
             net.eval()
             net_flops = FlopCountAnalysis(net, batch_x)
             flops = net_flops.total()
-            print(f"net_flops: {flops}")
+            print(f"net_flops_G: {flops/1000/1000/1000}")  # convert to G
             log_param('FLOPs', flops)
             FLOPs_done = True
             if mode == 'train':
