@@ -56,7 +56,7 @@ ENDSSH
 echo "Hello, I am back in $(hostname) to run the code"
 
 
-idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg16_3d" --train_on_level=0 --mode='train' --infer_2nd=0 --eval_id=0 --level_node=0 --fold=1 --remark="vgg11, testing dataset is new: 16 patients including 070" &
+idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg19_3d" --train_on_level=0 --mode='train' --infer_2nd=0 --eval_id=0 --level_node=0 --fold=1 --remark="vgg19, testing dataset is new: 16 patients including 070" &
 #idx=1; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=2 --mode='infer' --infer_2nd=0 --eval_id=465 --level_node=0 --fold=4 --remark="infer fine net" &
 
 wait
