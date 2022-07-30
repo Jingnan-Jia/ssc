@@ -6,7 +6,7 @@ import csv
 
 
 def main():
-    OBSERVER = 'Lucia'
+    OBSERVER = 'anne'
     PIE = True
     SCATTER = True
     if PIE:
@@ -23,6 +23,13 @@ def main():
         title_ls = ['TOT', 'GG', 'RET']
         for idx, pattern_ls in enumerate([tot_ls, gg_ls, ret_ls]):
             values, counts = np.unique(np.array(pattern_ls), return_counts=True)
+            values, counts = zip(*sorted(zip(values, counts)))
+
+            for nb in ('1', '2', '3', '4', '5'):  # in case some values are 0 frequency
+                if nb not in values:
+                    values = values + (nb,)
+                    counts = counts + (0,)
+
             values, counts = zip(*sorted(zip(values, counts)))
             ax = fig.add_subplot(1, 4, idx + 2)
             explode = (0, 0, 0, 0, 0)  # only "explode" the 'Agree' and 'Strongly agree'
@@ -80,7 +87,7 @@ def main():
             for idx_, patt in enumerate(pattern):
                 error_sum_ls[int(patt)-1] += goh_[idx_]
                 error_enum_ls[int(patt)-1] += 1
-            error_ave_ls = [i/j for i, j in zip(error_sum_ls, error_enum_ls)]
+            error_ave_ls = [i/(j+0.01) for i, j in zip(error_sum_ls, error_enum_ls)]
             y_max = max(y_max, max(error_ave_ls))
             scatter_kwds = {'c': colors[idx], "s": np.array([error_enum_ls[i-1] *4 for i in x_label])}
             ax = fig.add_subplot(1, 3, idx + 1)
@@ -90,7 +97,7 @@ def main():
         for i in range(3):
             ax = fig.add_subplot(1, 3, i + 1)
             ax.set_ylim([0, y_max+1])
-            ax.set_ylabel('Goh score label', fontdict={'fontsize':12})
+            ax.set_ylabel('MAE', fontdict={'fontsize':12})
             ax.set_xlabel('Likert scale', fontdict={'fontsize':12})
 
         plt.tight_layout()
