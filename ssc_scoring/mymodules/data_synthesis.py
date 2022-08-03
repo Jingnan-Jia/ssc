@@ -362,6 +362,7 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
             tmp = np.random.uniform()  # between 0 and 1
             tmp_idx = np.searchsorted(self.w_sum, tmp * self.w_sum[-1])
             out = np.unravel_index(tmp_idx, self.w_shape)
+            print(f"out: {out}")
             with open('results/ellipse_position.csv', 'a+') as f:
                 csv_writer = csv.writer(f)
                 csv_writer.writerow(out)
