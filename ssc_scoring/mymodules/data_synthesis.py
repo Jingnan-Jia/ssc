@@ -7,7 +7,7 @@ import glob
 import random
 from multiprocessing import Manager, Lock
 from typing import (Union)
-
+import csv
 import cv2
 from medutils.medutils import load_itk
 import numpy as np
@@ -180,7 +180,8 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
                  sampler,
                  gen_gg_as_retp,
                  gg_increase,
-                 tr_x
+                 tr_x,
+                 weighted_syn_region
                  ):
         """Synthesis new image samples.
 
@@ -233,7 +234,18 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
             self.label_numbers = validaug_label_numbers
         else:
             raise Exception("mode is wrong for synthetic data", self.mode)
+        self.weighted_syn_region = weighted_syn_region
 
+    # def generage_ssc_w(self):
+    #     # generate the ssc weight map. the first 3 steps focus the borde, the 4th step will focus the lower lung
+    #     # 0. generate a rectangular just covering the whole lung.
+    #     # 1. generate a inscribed circle of the rectangular
+    #     # 2. make a gaussian distribution (edge is 1, center is 0)
+    #     # 3. deform the circle to an ellipse (resample the circle)
+    #     # 4. generate a gradient
+    #
+    #     w_map = np.load()
+    #     return w_map
     def _filter_egg_fpaths_for_train(self, pattern='gg'):
         if pattern=='gg':
             egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.gg_fpath), 'gg_*from*.mha'))
@@ -319,7 +331,7 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
                 with train_lock:
                     sys_nb.value += 1
                     print("sys_nb: " + str(sys_nb.value))
-                d[self.key], d['label_key'] = self._systhesis(d[self.key], d['lung_mask_key'])
+                d[self.key], d['label_key'] = self._systhesis(d[self.key], d['lung_mask_key'], d['weight_map_key'])
                 # with train_lock:
                 print("after synthesis, label is " + str(d['label_key']) + str("\n"))
             else:  # No synthesis, number of original images +1
@@ -339,7 +351,26 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
         self._account_label(d['label_key'][0].item())
         return d
 
-    def _random_mask(self, nb_ellipse: int = 3, type: str = "ellipse"):
+    def rand_position_by_distribuiton(self, weight_map):
+        if self.weighted_syn_region:
+            # To select one point from 2D array accoring to weight map. I will firstly flattern the weight map and then
+            # random a value between [min, max] of weight map, then get the index using np.ravel of the flatterned
+            # weight map, then recover the position by the index using np.unravel
+            self.w_shape = weight_map.shape
+            self.w_sum = np.cumsum(weight_map)
+
+            tmp = np.random.uniform()  # between 0 and 1
+            tmp_idx = np.searchsorted(self.w_sum, tmp * self.w_sum[-1])
+            out = np.unravel_index(tmp_idx, self.w_shape)
+            with open('results/ellipse_position.csv', 'a+') as f:
+                csv_writer = csv.writer(f)
+                csv_writer.writerow(out)
+
+
+        else:
+            out = (random.randint(0, self.image_size), random.randint(0, self.image_size))
+        return out
+    def _random_mask(self, weight_map, nb_ellipse: int = 3, type: str = "ellipse"):
         fig_: np.ndarray = np.zeros((self.image_size, self.image_size))
         # Blue color in BGR
         color = 1
@@ -354,7 +385,7 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
             # Draw a ellipse with blue line borders of thickness of -1 px
             for i in range(nb_shapes):
                 angle = random.randint(0, 180)
-                center_coordinates = (random.randint(0, self.image_size), random.randint(0, self.image_size))
+                center_coordinates = self.rand_position_by_distribuiton(weight_map)
                 if random.random() > 0.5:
                     axlen = random.randint(1, 100)
                 else:
@@ -381,7 +412,7 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
 
         return fig_
 
-    def _systhesis(self, img: torch.Tensor, lung_mask: Union[np.ndarray, torch.Tensor]):
+    def _systhesis(self, img: torch.Tensor, lung_mask: Union[np.ndarray, torch.Tensor], weight_map: np.ndarray):
         img = img.numpy()
         if type(lung_mask) == torch.Tensor:
             lung_mask = lung_mask.numpy()
@@ -399,9 +430,10 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
         savefig(save_img, img, str(self.counter) + '_0_ori_img_' + self.mode + '.png')
         savefig(save_img, self.retp_candidate, str(self.counter) + '_1_retp_candidate.png')
 
+
         while (1):
-            rand_retp_mask = self._random_mask(3, type="ellipse")
-            rand_gg_mask = self._random_mask(3, type="ellipse")
+            rand_retp_mask = self._random_mask(weight_map, 3, type="ellipse")
+            rand_gg_mask = self._random_mask(weight_map, 3, type="ellipse")
 
             savefig(save_img, rand_gg_mask, str(self.counter) + '_2_rand_gg_mask.png')
             savefig(save_img, rand_retp_mask, str(self.counter) + '_3_rand_retp_mask.png')

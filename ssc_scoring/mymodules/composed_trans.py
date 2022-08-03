@@ -56,7 +56,8 @@ def xformd_score(mode: str = 'train', synthesis: bool = False, args: Namespace =
                                               sampler=args.sampler,
                                               gen_gg_as_retp=args.gen_gg_as_retp,
                                               gg_increase=args.gg_increase,
-                                              tr_x=tr_x))
+                                              tr_x=tr_x,
+                                              weighted_syn_region=args.weighted_syn_region))
         xforms.extend([
             AddChanneld(),
             RandomAffined(key=key, degrees=rotation, translate=(shift, shift), scale=(1 - scale, 1 + scale)),

@@ -93,6 +93,8 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
 
                 df_label_all = pd.concat([df_label_all, df_label])
                 df_pred_all = pd.concat([df_pred_all, df_pred])
+        if len(df_pred_all.columns) == 5:  # attention !
+            df_pred_all -= 32
         df_label_all.to_csv(label_all_path, index=False)
         df_pred_all.to_csv(pred_all_path, index=False)
         print('finish merge 4 fold results')
@@ -110,6 +112,10 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
 
 if __name__ == "__main__":
     run_pos = True
-    ex_ls = [193, 194, 276, 277]
+    # ex_ls = [193, 194, 276, 277]
+    ex_ls = [753, 757, 760, 762]  # vgg19
+    # ex_ls = [749, 755, 759, 761]  # vgg16
+    # ex_ls = [747, 754, 756, 758]  # vgg11
+
 
     merge(run_pos, ex_ls)

@@ -30,7 +30,7 @@ from ssc_scoring.mymodules.myloss import get_loss
 from ssc_scoring.mymodules.networks.cnn_fc2d import get_net, ReconNet
 from ssc_scoring.mymodules.mydata import LoadScore
 from ssc_scoring.mymodules.inference import record_best_preds, round_to_5
-from ssc_scoring.mymodules.path import PathPos
+from ssc_scoring.mymodules.path import PathPos, PathScoreInit
 from argparse import Namespace
 
 LogType = Optional[Union[int, float, str]]  # a global type to store immutable variables saved to log files
@@ -250,6 +250,7 @@ def train(args: Namespace, id_: int, log_dict: Dict[str, LogType]) -> Dict[str, 
     mypath = Path(id_)
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
     net = get_net(args.net, 3, args) if args.r_c == "r" else get_net(args.net, 21, args)  # 3 scores per image
+    print(net)
     net_parameters = count_parameters(net)
     net_parameters = str(round(net_parameters / 1024 / 1024, 2))
     log_param('net_parameters_M', net_parameters)
@@ -335,7 +336,7 @@ if __name__ == "__main__":
     mlflow.set_experiment("ssc_scoring")
 
     args = get_args()
-    id: int = record_1st('score', args)  # write super parameters from set_args.py to record file.
+    id: int = record_1st(PathScoreInit().record_file)  # write super parameters from set_args.py to record file.
 
     with mlflow.start_run(run_name=str(id), tags={"mlflow.note.content": args.remark}):
         # p1 = threading.Thread(target=record_cgpu_info, args=(args.outfile,))

@@ -124,7 +124,7 @@ def confusion(label_file: str, pred_file: str, bland_in_1_mean_std=None, adap_ma
     df_pred = read_check(file_fpath=pred_file)
     print('len_df_label', len(df_label))
 
-    # if len(df_label.columns) == 5:
+    # if len(df_label.columns) == 5:   # attention !
     #     df_pred -= 32
     # df_label = df_label.head(18) # pred_1 = "/data/jjia/ssc_scoring/LK_time2_18patients.csv"
     # df_pred = df_pred.head(18) #label_1 = "/data/jjia/ssc_scoring/ground_truth_18_patients.csv"

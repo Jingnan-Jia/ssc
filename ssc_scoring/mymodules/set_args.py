@@ -51,6 +51,9 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--sampler', choices=(1, 0), help='if customer sampler?', type=int, default=0)
     parser.add_argument('--sys', choices=(1, 0), help='if synthesis_data?', type=int, default=1)
     parser.add_argument('--sys_ratio', help='ratio of sys data in the whole data', type=float, default=0.0)
+    parser.add_argument('--weighted_syn_region', choices=(1, 0), help='apply weighted synthesis region: focus the'
+                                                                      ' borders, lower regions', type=int, default=1)
+
     parser.add_argument('--sys_pro_in_0', help='sys_pro_in_0', type=float, default=0.5)  # must be a float number !
     parser.add_argument('--_ori_weight0', help='_ori_weight0, do not set this value', type=float, default=0.0)
     parser.add_argument('--gg_increase', help='gg increase ratio', type=float, default=0.1)  # must be a float number !

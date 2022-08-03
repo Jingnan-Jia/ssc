@@ -13,7 +13,6 @@ from medutils.medutils import load_itk
 import matplotlib.pyplot as plt
 import csv
 
-
 def clip(x_np, min, max):
     """Pixel value truncation"""
     x_np[x_np > max] = max
@@ -54,7 +53,6 @@ def main():
         except:
             print(i, 'Error', name)
             err_ls.append(name)
-
 
     with open('box_clip_1500.csv', 'a') as f:
         writer = csv.writer(f)

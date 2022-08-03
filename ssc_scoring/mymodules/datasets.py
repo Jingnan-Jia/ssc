@@ -9,7 +9,7 @@ import numpy as np
 import torch
 # import streamlit as st
 from tqdm import tqdm
-
+import os
 from monai.transforms import ScaleIntensityRange
 
 from torch.utils.data import Dataset
@@ -90,6 +90,8 @@ class SynDataset(Dataset):
             self.data_y_list = self.data_y_list[index]
         print('loading data ...')  # All images are loaded. It is 2D slices, so gpu memory is okay to fit them.
         self.data_x = [load_itk(x, require_ori_sp=True) for x in tqdm(self.data_x_names)]
+        self.weight_map_fpaths = [os.path.dirname(i) + "/weight_map.npy" for i in self.data_x_names]
+        self.weight_maps = [np.load(i) for i in self.weight_map_fpaths]
         self.synthesis = synthesis
         if self.synthesis or self.require_lung_mask:  # return lung mask in the data dictionary
             mask_end = "_lung_mask"  # load all lung masks
@@ -139,7 +141,8 @@ class SynDataset(Dataset):
                 'label_key': self.data_y_tensor[idx],
                 'space_key': self.sp[idx],
                 'origin_key': self.ori[idx],
-                'fpath_key': self.data_x_names[idx]}
+                'fpath_key': self.data_x_names[idx],
+                'weight_map_key': self.weight_maps[idx]}
         if self.synthesis or self.require_lung_mask:
             new_dict = {'lung_mask_key': self.lung_masks[idx]}
             data.update(new_dict)
