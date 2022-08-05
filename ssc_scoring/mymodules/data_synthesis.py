@@ -356,16 +356,17 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
             # To select one point from 2D array accoring to weight map. I will firstly flattern the weight map and then
             # random a value between [min, max] of weight map, then get the index using np.ravel of the flatterned
             # weight map, then recover the position by the index using np.unravel
-            self.w_shape = weight_map.shape
+            self.w_shape = weight_map.shape  # shape: (512, 512)
             self.w_sum = np.cumsum(weight_map)
 
             tmp = np.random.uniform()  # between 0 and 1
             tmp_idx = np.searchsorted(self.w_sum, tmp * self.w_sum[-1])
-            out = np.unravel_index(tmp_idx, self.w_shape)
-            print(f"out: {out}")
-            with open('results/ellipse_position.csv', 'a+') as f:
+            y, x = np.unravel_index(tmp_idx, self.w_shape)
+            out = (x, y)  # exchange the x and y, because the point with cooridinate of (x, y) should be indexed by (y,x)
+            print(f"x: {x}, y:{y})")
+            with open('results/ellipse_position2.csv', 'a+') as f:
                 csv_writer = csv.writer(f)
-                csv_writer.writerow(out)
+                csv_writer.writerow([x, y])
 
 
         else:

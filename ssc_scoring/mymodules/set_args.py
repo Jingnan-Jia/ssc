@@ -50,7 +50,7 @@ def get_args() -> argparse.Namespace:
                         default=None)  # "193_194_276_277" 193_194_276_277
     parser.add_argument('--sampler', choices=(1, 0), help='if customer sampler?', type=int, default=0)
     parser.add_argument('--sys', choices=(1, 0), help='if synthesis_data?', type=int, default=1)
-    parser.add_argument('--sys_ratio', help='ratio of sys data in the whole data', type=float, default=0.0)
+    parser.add_argument('--sys_ratio', help='ratio of sys data in the whole data', type=float, default=0.5)
     parser.add_argument('--weighted_syn_region', choices=(1, 0), help='apply weighted synthesis region: focus the'
                                                                       ' borders, lower regions', type=int, default=1)
 

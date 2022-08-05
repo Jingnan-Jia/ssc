@@ -348,7 +348,7 @@ if __name__ == "__main__":
         log_param('ID', id)
         log_dict = train(args, id, log_dict)
         # log_params(log_dict)
-        record_2nd('score', current_id=id, log_dict=log_dict, args=args)  # write more parameters & metrics to record file.
+        # record_2nd('score', current_id=id, log_dict=log_dict, args=args)  # write more parameters & metrics to record file.
 
         # p1.do_run = False  # stop the thread
         # p1.join()
