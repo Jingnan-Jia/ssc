@@ -69,7 +69,7 @@ echo "Hello, I am back in $(hostname) to run the code"
 
 
 #idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=500 --sys=1 --sampler=0 --pretrained=1 --sys_pro_in_0=0.5 --sys_ratio=0.0 --mode='train' --fold=1 --gen_gg_as_retp=1 --remark="sampler+sys,sys_ratio=0.0, 16 patients in test dataset, including pat_070" &
-idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=501 --net='convnext_tiny' --sys=1 --sampler=0 --pretrained=1 --sys_pro_in_0=0.5 --sys_ratio=0.0 --mode='train' --weighted_syn_region=0 --batch_size=10 --fold=1 --gen_gg_as_retp=1 --remark="No weight_map (switch x,y), 16 patients in test dataset, interval=5, with pred outpout"
+idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=501 --net='convnext_tiny' --sys=1 --sampler=0 --pretrained=1 --sys_pro_in_0=0.8 --sys_ratio=0.0 --mode='train' --weighted_syn_region=0 --batch_size=10 --fold=1 --gen_gg_as_retp=1 --remark="sys_pro_in_0=0.8, No weight_map (switch x,y), 16 patients in test dataset, interval=5, with pred outpout"
 
 
 
