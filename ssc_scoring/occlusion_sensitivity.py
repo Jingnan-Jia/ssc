@@ -183,7 +183,7 @@ def occlusion_map(patch_size, x, y, net, lung_mask=None, occlusion_dir=None, sav
     lung_mask = lung_mask.numpy()
     lung_mask[lung_mask > 0] = 1
     lung_mask[lung_mask <= 0] = 0
-    np.save(os.path.join(occlusion_dir, f"lung_mask.npy"), lung_mask)
+    # np.save(os.path.join(occlusion_dir, f"lung_mask.npy"), lung_mask)
     x = x.to(device)  # shape [channel, w, h]
     net.to(device)
     x_ = x.unsqueeze(0)
@@ -231,7 +231,7 @@ def occlusion_map(patch_size, x, y, net, lung_mask=None, occlusion_dir=None, sav
 
     # print(f'x_np.mean: {x_mean}, x_np.std: {x_std}, ')
     # print(f"sum of lung mask: {np.sum(lung_mask.numpy())}")
-    savefig(True, lung_mask, 'lung_mask.png', occlusion_dir)
+    savefig(False, lung_mask, 'lung_mask.png', occlusion_dir)
     savefig(True, x_np[0], f"ori_image_tot_{int(out_ori_1)}_gg_{int(out_ori_2)}_ret_{int(out_ori_3)}.png", occlusion_dir)
 
     # nb_ptchs = math.ceil(512 / patch_size)
@@ -470,7 +470,7 @@ def batch_occlusion(net_id: int, patch_size: int, max_img_nb: int, occ_status='h
     all_loader = LoadScore(mypath, label_file, seed, args, nb_img=None, require_lung_mask=True)  # data loader
     train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
 
-    test_dataloader = iter(test_dataloader)  # only show visualization maps for testing dataset
+    test_dataloader = iter(valid_dataloader)  # only show visualization maps for testing dataset
 
     net = get_net('convnext_tiny', 3, args)  # get network architecture
     net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))  # load trained weights
@@ -497,13 +497,13 @@ def batch_occlusion(net_id: int, patch_size: int, max_img_nb: int, occ_status='h
                 level_dir = get_level_dir(img_fpath)
                 # if 'Pat_135' not in pat_dir:
                 #     continue
-                occlusion_map_dir = os.path.join(mypath.id_dir, 'test_data_occlusion_maps_occ_by_' + occ_status, pat_dir, level_dir)
-                occlusion_map(patch_size, x_, y_, net, lung_mask, occlusion_map_dir, save_occ_x=True, stride=patch_size//4, occ_status=occ_status)
+                occlusion_map_dir = os.path.join(mypath.id_dir, 'valid_data_occlusion_maps_occ_by_' + occ_status, pat_dir, level_dir)
+                occlusion_map(patch_size, x_, y_, net, lung_mask, occlusion_map_dir, save_occ_x=False, stride=patch_size//4, occ_status=occ_status)
 
 
 if __name__ == '__main__':
     occ_status = 'healthy' # 'diseased' or 'healthy' or 'diseased_ret'
-    id = 1903
+    id = 1922
     patch_size = 64
     # grid_nb = 10
     batch_occlusion(id, patch_size, max_img_nb=1000, occ_status=occ_status)

@@ -10,7 +10,7 @@ import scipy
 
 # This file is used to search/explore the best threshold to let the heat map respresent the Goh Score.
 
-parent_folder = "/home/jjia/data/ssc_scoring/ssc_scoring/results/models/1903/test_data_occlusion_maps_occ_by_healthy"
+parent_folder = "/home/jjia/data/ssc_scoring/ssc_scoring/results/models/1920/test_data_occlusion_maps_occ_by_healthy"
 lung_fpath_ls = sorted(glob.glob(f"{parent_folder}/Pat_*/Level*/lung_mask.npy"))
 
 fig = plt.figure(figsize=(12, 4))
@@ -99,7 +99,9 @@ for fig_idx in range(3):
 
 fig.show()
 fig_diff.show()
-fig.savefig(f"heatmap_ratio_vs_goh_score_threshold_-0.6.png")
+fig.savefig(f"1920test_heatmap_ratio_vs_goh_score_threshold_-0.6.png")
+fig_diff.savefig(f"1920test_heatmap_ratio_vs_goh_score_diffthreshold_-0.6.png")
+
 plt.close(fig)
 
 

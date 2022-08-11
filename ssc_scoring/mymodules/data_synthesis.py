@@ -248,9 +248,13 @@ class SysthesisNewSampled(RandomizableTransform, Transform):
     #     return w_map
     def _filter_egg_fpaths_for_train(self, pattern='gg'):
         if pattern=='gg':
-            egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.gg_fpath), 'gg_*from*.mha'))
+            # egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.gg_fpath), 'gg_*from*.mha'))
+            egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.gg_fpath), 'gg.mha'))
+
         elif pattern=='ret':
-            egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.retp_fpath), 'ret_*from*.mha'))
+            # egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.retp_fpath), 'ret_*from*.mha'))
+            egg_fpaths = glob.glob(os.path.join(os.path.dirname(self.retp_fpath), 'retp.mha'))
+
         else:
             raise Exception(f'pattern should be ret or gg, but is {pattern}')
         tr_pat_ids = set([x_path.split('Pat_')[-1][:3] for x_path in self.tr_x])
