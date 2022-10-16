@@ -25,7 +25,7 @@ def get_args():
     parser.add_argument('--fold', choices=(1, 2, 3, 4), help='1 to 4', type=int, default=1)
     parser.add_argument('--valid_period', help='how many epochs between 2 validation', type=int, default=5)
     parser.add_argument('--workers', help='number of workers for dataloader', type=int, default=6)
-    parser.add_argument('--ts_level_nb', choices=(235, 240, 250), help='if customer sampler?', type=int, default=250)
+    parser.add_argument('--ts_level_nb', choices=('235', '240', '250', 'pft_62'), help='if customer sampler?', type=str, default='pft_62')
     parser.add_argument('--loss', choices=('mse', 'mae', 'smooth_mae', 'mse+mae', 'msehigher'), help='mode', type=str,
                         default='mse')
     parser.add_argument('--pretrained', choices=(1, 0), help='pretrained or not', type=int, default=0)

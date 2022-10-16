@@ -606,7 +606,7 @@ def record_cgpu_info(outfile) -> Tuple:
     t = threading.currentThread()
     t.do_run = True
 
-    if outfile:
+    if outfile not in [None, 'None']:
         cpu_count = psutil.cpu_count()
         log_param('cpu_count', cpu_count)
 

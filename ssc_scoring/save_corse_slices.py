@@ -48,9 +48,8 @@ def save_corse_slice(args, ex_dt):
         label_file = mypath.label_excel_fpath  # "dataset/SSc_DeepLearning/GohScores.xlsx"
         seed = 49
         all_loader = LoadPos2Score(mypath, label_file, seed, args.fold, args.total_folds, args.ts_level_nb)
-        valid_dataloader = all_loader.load()
+        dataloader_dict = all_loader.load(dataset='test')
 
-        dataloader_dict = {'valid': valid_dataloader}
         # , 'valid': valid_dataloader, 'validaug': validaug_dataloader}
         # dataloader_dict.update({'test': test_dataloader})
         for mode, loader in dataloader_dict.items():
@@ -74,9 +73,10 @@ def save_corse_slice(args, ex_dt):
 
 if __name__ == "__main__":
     args = get_args()
-    ex_dt = {1: 193,
-             2: 194,
-             3: 276,
-             4: 277}
+    # ex_dt = {1: 193,
+    #          2: 194,
+    #          3: 276,
+    #          4: 277}
+    ex_dt = {1: 741}
 
     save_corse_slice(args, ex_dt)

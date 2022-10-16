@@ -13,7 +13,7 @@ class PathInit(ABC):
      Different sub-Path need to implement the 2 values"""
 
     def __init__(self):
-        self.results_dir: str = 'results'
+        self.results_dir: str = '/home/jjia/data/ssc_scoring/ssc_scoring/results'
         self.project_name = self._project_name()
         self.record_file = os.path.join(self.results_dir, self._record_file())
 
@@ -56,7 +56,7 @@ class Path(PathInit, ABC):
     def __init__(self, id: Union[int, str], model_dir: str, check_id_dir: bool = False):
         super().__init__()
         self.slurmlog_dir = os.path.join(self.results_dir, 'slurmlogs')
-        self.data_dir = 'dataset'
+        self.data_dir = '/home/jjia/data/ssc_scoring/ssc_scoring/dataset'
         self.ori_data_dir = os.path.join(self.data_dir, 'SSc_DeepLearning')
         self.label_excel_fpath = os.path.join(self.data_dir, "GohScores.xlsx")
 

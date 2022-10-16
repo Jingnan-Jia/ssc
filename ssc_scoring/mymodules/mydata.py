@@ -18,7 +18,31 @@ from monai.transforms import Transform
 from ssc_scoring.mymodules.composed_trans import xformd_pos, xformd_score, xformd_pos2score
 from ssc_scoring.mymodules.datasets import SynDataset
 from ssc_scoring.mymodules.tool import sampler_by_disext
+import pathlib
 
+
+
+def clean_data(pft_df, data_dir):
+    pft_df.drop(pft_df[np.isnan(pft_df.DLCO_SB)].index, inplace=True)
+    pft_df.drop(pft_df[pft_df.DLCO_SB == 0].index, inplace=True)
+    pft_df.drop(pft_df[np.isnan(pft_df['FEV1'])].index, inplace=True)
+    pft_df.drop(pft_df[pft_df['FEV1'] == 0].index, inplace=True)
+    pft_df.drop(pft_df[np.isnan(pft_df.DateDF_abs)].index, inplace=True)
+    pft_df.drop(pft_df[pft_df.DateDF_abs > 10].index, inplace=True)
+    pft_df.drop(pft_df[pft_df['DLCOc/pred'] == "NV"].index, inplace=True)
+    pft_df.drop(pft_df[pft_df['FVC/predNew'] == "NV"].index, inplace=True)
+
+    scans = glob.glob(data_dir + "/SSc*[!LungMask].nii.gz")  # exclude lung mask files
+    availabel_id_set = set([pathlib.Path(id).stem[:-4] for id in scans])  # use stem and :-4 to remove .nii.gz
+    pft_df.drop(pft_df.loc[~pft_df['subjectID'].isin(availabel_id_set)].index, inplace=True)
+
+
+    # pft_df = pft_df.drop(pft_df[pft_df['subjectID'] not in availabel_id_set].index)
+    # print(f"length of scans: {len(scans)}, length of labels: {len(pft_df)}")
+    assert len(scans)>=len(pft_df)
+
+
+    return pft_df
 
 class LoaderInit(ABC):
     """Abstract class for `LoadScore`, `LoadPos` and `LoadPos2Score`. Methods of and `load`, `xformd` and `load_per_xy`,
@@ -41,7 +65,7 @@ class LoaderInit(ABC):
         self.fold = fold
         self.total_folds = total_folds
         self.ts_level_nb = ts_level_nb
-        if self.ts_level_nb == 240:
+        if self.ts_level_nb == '240':
             # self.ts_id = [68, 83, 36, 187, 238, 12, 158, 189, 230, 11, 35, 37, 137, 144, 17, 42, 66, 70, 28, 64, 210, 3, 49,
             #          32, 236, 206, 194, 196, 7, 9, 16, 19, 20, 21, 40, 46, 47, 57, 58, 59, 60, 62, 116, 117, 118, 128,
             #          134, 216]
@@ -49,10 +73,19 @@ class LoaderInit(ABC):
                            49, 57, 58, 59, 60, 62, 64, 66, 68, 70, 83, 116, 117, 118, 128, 134, 137,
                            144, 158, 187, 189, 194, 196, 206, 210, 216, 230, 236, 238]
 
-        elif self.ts_level_nb == 250:  # 50 patients
+        elif self.ts_level_nb == '250':  # 50 patients
             self.ts_id = [7, 9, 11, 12, 16, 19, 20, 21, 26, 28, 35, 36, 37, 40, 46, 47, 49, 57,
                           58, 59, 60, 62, 66, 68, 70, 77, 83, 116, 117, 118, 128, 134, 137, 140, 144,
                           149, 158, 170, 179, 187, 189, 196, 203, 206, 209, 210, 216, 227, 238, 263]
+            self.ts_id_lung_function = []
+        elif self.ts_level_nb == 'pft_62': # lung function pre-training
+            data_dir = '/home/jjia/data/dataset/lung_function/iso1.5'
+            label_fpath = "/home/jjia/data/dataset/lung_function/SScBaseline_PFT_anonymized.xlsx"
+            label_excel = pd.read_excel(label_fpath, engine='openpyxl')
+            label_excel = label_excel.sort_values(by=['subjectID'])
+            self.label_excel_pft = clean_data(label_excel, data_dir)
+            self.kfold_seed = 711  # lung_function kf_seed
+
         else:
             raise Exception('please use correct testing dataset')
         self.level_node = level_node
@@ -63,6 +96,7 @@ class LoaderInit(ABC):
 
         self.batch_size = batch_size
         self.workers = workers
+        self.kf = KFold(n_splits=self.total_folds, shuffle=True, random_state=self.kfold_seed)  # for future reproduction
 
     def save_xy(self, xs: list, ys: list, mode: str):
         with open(self.mypath.data(mode), 'a') as f:
@@ -81,6 +115,60 @@ class LoaderInit(ABC):
                 x.append(x_pat)
                 y.append(y_pat)
         return x, y
+
+    def split_dir_pats_pft(self):
+
+        dir_pats = sorted(glob.glob(os.path.join(self.mypath.dataset_dir(self.resample_z), "Pat_*", "CTimage.mha")))
+        if len(dir_pats) == 0:  # does not find patients in this directory
+            dir_pats = sorted(glob.glob(os.path.join(self.mypath.dataset_dir(self.resample_z), "Pat_*CTimage*.mha")))
+
+        label_excel = pd.read_excel(self.label_file, engine='openpyxl')
+        # 3 labels for one level
+        pats_id_in_excel = pd.DataFrame(label_excel, columns=['PatID']).values
+        pats_id_in_excel = [i[0] for i in pats_id_in_excel]
+        print(f"len(dir): {len(dir_pats)}, len(pats_in_excel): {len(pats_id_in_excel)} ")
+        print("======================")
+        assert len(dir_pats) == len(pats_id_in_excel)
+
+        # assert the names of patients got from 2 ways
+        pats_id_in_dir = [int(path.split('Pat_')[-1][:3]) for path in dir_pats]
+        pats_id_in_excel = [int(pat_id) for pat_id in pats_id_in_excel]
+        assert pats_id_in_dir == pats_id_in_excel
+
+        def tr_vd_ts_id():
+            map_excel_fpath = "/data1/jjia/dataset/lung_function/Dictionary_2columns.xlsx"
+            map_excel = pd.read_excel(map_excel_fpath, engine='openpyxl')
+            map_dt_ls = map_excel.to_dict('records')  #
+            map_dt = {pat['PatNo']: pat['StudyNo'] for pat in map_dt_ls}
+            mode_ls = []
+            for mode in ['train', 'valid', 'test']:
+                PatNo_fpath = f"/data1/jjia/lung_function/lung_function/scripts/results/experiments/849/{mode}_label.csv"
+                PatNo_df = pd.read_csv(PatNo_fpath)
+                PatNo_dt = PatNo_df.to_dict('records')
+                PatNo_ls = [pat_dt['pat_id'] for pat_dt in PatNo_dt]  # a list of 3-digit id
+                StudyNo_ls = []
+                for i in PatNo_ls:
+                    try:
+                        j = map_dt[i]
+                    except Exception:
+                        print(f"this key does not exist {i}")
+                        continue
+                    StudyNo_ls.append(j)
+                mode_ls.append(StudyNo_ls)
+            return mode_ls[0], mode_ls[1], mode_ls[2]
+
+        tr_id_ls, vd_id_ls, ts_id_ls = tr_vd_ts_id()
+        tr_dir, vd_dir, ts_dir = [], [], []
+
+        for id, dir_pt in zip(pats_id_in_dir, dir_pats):
+            if id in ts_id_ls:
+                ts_dir.append(dir_pt)
+            if id in vd_id_ls:
+                vd_dir.append(dir_pt)
+            if id in tr_id_ls:
+                tr_dir.append(dir_pt)
+
+        return np.array(tr_dir), np.array(vd_dir),np.array(ts_dir)
 
     def split_dir_pats(self):
         if self.mypath.project_name == 'score':
@@ -120,14 +208,14 @@ class LoaderInit(ABC):
 
     def prepare_data(self):
         # get data_x names
-        kf = KFold(n_splits=self.total_folds, shuffle=True, random_state=self.kfold_seed)  # for future reproduction
-
-        tr_vd_pt, ts_pt = self.split_dir_pats()
-
-        kf_list = list(kf.split(tr_vd_pt))
-        tr_pt_idx, vd_pt_idx = kf_list[self.fold - 1]
-        tr_pt = tr_vd_pt[tr_pt_idx]
-        vd_pt = tr_vd_pt[vd_pt_idx]
+        if self.ts_level_nb == 'pft_62':  # the train/valid/test data are pre-defined
+            tr_pt, vd_pt, ts_pt = self.split_dir_pats_pft()
+        else:
+            tr_vd_pt, ts_pt = self.split_dir_pats()
+            kf_list = list(self.kf.split(tr_vd_pt))
+            tr_pt_idx, vd_pt_idx = kf_list[self.fold - 1]
+            tr_pt = tr_vd_pt[tr_pt_idx]
+            vd_pt = tr_vd_pt[vd_pt_idx]
 
         # tr_pt = tr_vd_pt  # todo: the two lines needs to be commented if after berend's style training.
         # vd_pt = ts_pt  # todo: the two lines needs to be commented if after berend's style training.
@@ -187,10 +275,10 @@ class LoadPos(LoaderInit):
         tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
         vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]
         ts_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(ts_x, ts_y)]
-        tr_dataset = monai.data.CacheDataset(data=tr_data, transform=self.xformd('train'), num_workers=4, cache_rate=1)
-        vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('train'), num_workers=4, cache_rate=1)
-        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid'), num_workers=4, cache_rate=1)
-        ts_dataset = monai.data.CacheDataset(data=ts_data, transform=self.xformd('valid'), num_workers=4, cache_rate=1)
+        tr_dataset = monai.data.CacheDataset(data=tr_data, transform=self.xformd('train'), num_workers=1, cache_rate=1)
+        vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('train'), num_workers=1, cache_rate=1)
+        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid'), num_workers=1, cache_rate=1)
+        ts_dataset = monai.data.CacheDataset(data=ts_data, transform=self.xformd('valid'), num_workers=1, cache_rate=1)
         # self.workers = 0
         train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.workers,
                                       pin_memory=False, persistent_workers=True)
@@ -383,7 +471,8 @@ class LoadPos2Score(LoaderInit):
     def xformd(self, mode):
         return xformd_pos2score(mode, self.mypath)
 
-    def load(self):  # only load validation dataset
+    def load(self, dataset='valid'):  # only load validation dataset
+        out_dt = {}
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
         cache_nb = 10 if len(tr_x) < 50 else 50
         # print('valid_x for pos2score')
@@ -392,21 +481,30 @@ class LoadPos2Score(LoaderInit):
         tr_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(tr_x, tr_y)]
         vd_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(vd_x, vd_y)]
         ts_data = [{'fpath_key': x, 'world_key': y} for x, y in zip(ts_x, ts_y)]
-        # tr_dataset = monai.data.CacheDataset(data=tr_data, transform=self.xformd('train'),  num_workers=4,
-        #                                         cache_rate=0.1)
-        # vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('train'), num_workers=4,
-        #                                         cache_rate=0.1)
-        vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid'), num_workers=0,
-                                             cache_rate=1)
-        # ts_dataset = monai.data.PersistentDataset(data=ts_data, transform=self.xformd('valid'),
-        #                                           cache_dir="persistent_cache")
-        # train_dataloader = iter(tr_dataset)
-        # validaug_dataloader = iter(vdaug_dataset)
-        valid_dataloader = iter(vd_dataset)
-        # test_dataloader = iter(ts_dataset)
+        if 'train' in dataset:
+            tr_dataset = monai.data.CacheDataset(data=tr_data, transform=self.xformd('train'),  num_workers=4,
+                                                    cache_rate=0.1)
+            train_dataloader = iter(tr_dataset)
+            out_dt['train']= train_dataloader
+        if 'validaug' in dataset:
+            vdaug_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('validaug'), num_workers=4,
+                                                    cache_rate=0.1)
+            validaug_dataloader = iter(vdaug_dataset)
+            out_dt['validaug']= validaug_dataloader
 
+        if 'valid' in dataset:
+            vd_dataset = monai.data.CacheDataset(data=vd_data, transform=self.xformd('valid'), num_workers=0,
+                                                 cache_rate=1)
+            valid_dataloader = iter(vd_dataset)
+            out_dt['valid'] = valid_dataloader
+
+        if 'test' in dataset:
+            ts_dataset = monai.data.CacheDataset(data=ts_data, transform=self.xformd('test'), num_workers=0,
+                                                 cache_rate=1)
+            test_dataloader = iter(ts_dataset)
+            out_dt['test'] = test_dataloader
         # return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
 
-        return valid_dataloader
+        return out_dt
 
 
