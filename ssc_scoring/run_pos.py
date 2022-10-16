@@ -91,10 +91,13 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
         global FLOPs_done
         if not FLOPs_done:
             net.eval()
-            net_flops = FlopCountAnalysis(net, batch_x)
-            flops = net_flops.total()
-            # print(f"net_flops_G: {flops/1000/1000/1000}")  # convert to G
-            log_param('net_FLOPs_G', flops/1000/1000/1000)# convert to G
+            try:
+                net_flops = FlopCountAnalysis(net, batch_x)
+                flops = net_flops.total()
+                # print(f"net_flops_G: {flops/1000/1000/1000}")  # convert to G
+                log_param('net_FLOPs_G', flops/1000/1000/1000)# convert to G
+            except Exception:
+                pass
             FLOPs_done = True
             if mode == 'train':
                 net.train()

@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument('--epochs', help='total epochs', type=int, default=500)
     parser.add_argument('--weight_decay', help='L2 regularization', type=float,
                         default=0.0001)  # must be a float number !
-    parser.add_argument('--batch_size', help='batch_size', type=int, default=4)
+    parser.add_argument('--batch_size', help='batch_size', type=int, default=1)
     parser.add_argument('--outfile', help='output file when running by script instead of pycharm', type=str, default='None')
     parser.add_argument('--hostname', help='hostname of the server', type=str, default='None')
     parser.add_argument('--remark', help='comments on this experiment', type=str, default='None')
