@@ -29,7 +29,7 @@ def get_args():
     parser.add_argument('--loss', choices=('mse', 'mae', 'smooth_mae', 'mse+mae', 'msehigher'), help='mode', type=str,
                         default='mse')
     parser.add_argument('--pretrained', choices=(1, 0), help='pretrained or not', type=int, default=0)
-    parser.add_argument('--epochs', help='total epochs', type=int, default=500)
+    parser.add_argument('--epochs', help='total epochs', type=int, default=200)
     parser.add_argument('--weight_decay', help='L2 regularization', type=float,
                         default=0.0001)  # must be a float number !
     parser.add_argument('--batch_size', help='batch_size', type=int, default=1)

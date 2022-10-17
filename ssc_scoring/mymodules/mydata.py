@@ -142,7 +142,9 @@ class LoaderInit(ABC):
             map_dt = {pat['PatNo']: pat['StudyNo'] for pat in map_dt_ls}
             mode_ls = []
             for mode in ['train', 'valid', 'test']:
-                PatNo_fpath = f"/data1/jjia/lung_function/lung_function/scripts/results/experiments/849/{mode}_label.csv"
+                fold_exid_dt = {1: 833, 2: 839, 3: 845, 4: 849}
+
+                PatNo_fpath = f"/data1/jjia/lung_function/lung_function/scripts/results/experiments/{fold_exid_dt[self.fold]}/{mode}_label.csv"
                 PatNo_df = pd.read_csv(PatNo_fpath)
                 PatNo_dt = PatNo_df.to_dict('records')
                 PatNo_ls = [pat_dt['pat_id'] for pat_dt in PatNo_dt]  # a list of 3-digit id
