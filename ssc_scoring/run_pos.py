@@ -28,7 +28,7 @@ from ssc_scoring.mymodules.path import PathPosInit, PathPos
 # from kd_med import kd_loss, PreTrainedEnc, GetEncSConv
 import kd_med
 from mlflow import log_metric, log_metrics, log_param, log_params
-from fvcore.nn import FlopCountAnalysis
+# from fvcore.nn import FlopCountAnalysis
 FLOPs_done = False
 
 def try_func(func):
@@ -88,21 +88,21 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
         batch_x = data['image_key'].to(device)
         batch_y = data['label_in_patch_key'].to(device)
 
-        global FLOPs_done
-        if not FLOPs_done:
+        # global FLOPs_done
+        # if not FLOPs_done:
+        #     net.eval()
+            # try:
+            #     net_flops = FlopCountAnalysis(net, batch_x)
+            #     flops = net_flops.total()
+            #     # print(f"net_flops_G: {flops/1000/1000/1000}")  # convert to G
+            #     log_param('net_FLOPs_G', flops/1000/1000/1000)# convert to G
+            # except Exception:
+            #     pass
+            # FLOPs_done = True
+        if mode == 'train':
+            net.train()
+        else:
             net.eval()
-            try:
-                net_flops = FlopCountAnalysis(net, batch_x)
-                flops = net_flops.total()
-                # print(f"net_flops_G: {flops/1000/1000/1000}")  # convert to G
-                log_param('net_FLOPs_G', flops/1000/1000/1000)# convert to G
-            except Exception:
-                pass
-            FLOPs_done = True
-            if mode == 'train':
-                net.train()
-            else:
-                net.eval()
 
         if args.kd == 'dist':  # kd train
             no_cuda = not torch.cuda.is_available()
