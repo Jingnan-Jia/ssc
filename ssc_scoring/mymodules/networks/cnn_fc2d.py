@@ -109,6 +109,7 @@ class ReconNet(nn.Module):
 
 
 class Cnn3fc1(nn.Module):
+
     def __init__(self, num_classes=1000):
         super().__init__()
         self.features = nn.Sequential(
@@ -168,6 +169,52 @@ class Cnn2fc1_old(nn.Module):
         x = self.classifier(x)
         return x
 
+class vgg11_HR(nn.Module):
+
+    def __init__(self, num_classes=1000):
+        super().__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(1, 64, kernel_size=11, stride=4, padding=2),
+            nn.ReLU(inplace=True),
+            # nn.MaxPool2d(kernel_size=3, stride=2),
+
+            nn.Conv2d(64, 128, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            # nn.MaxPool2d(kernel_size=3, stride=2),
+
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            # nn.MaxPool2d(kernel_size=3, stride=2),
+        )
+        self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
+        self.classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(512, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
+
+
 
 class Cnn2fc1(nn.Module):
 
@@ -203,7 +250,9 @@ class Cnn2fc1(nn.Module):
 
 def get_net(name: str, nb_cls: int, args):
     if 'vgg' in name:
-        if name == 'vgg11_bn':
+        if name == 'vgg11_HR':
+            net = vgg11_HR(num_classes=nb_cls)
+        elif name == 'vgg11_bn':
             net = models.vgg11_bn(pretrained=args.pretrained, progress=True)
         elif name == 'vgg16':
             net = models.vgg16(pretrained=args.pretrained, progress=True)

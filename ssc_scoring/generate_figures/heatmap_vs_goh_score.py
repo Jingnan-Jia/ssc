@@ -85,8 +85,8 @@ for fig_idx in range(3):
     ax.set_ylim([0, 100])
     ax.set_xlim([0, 100])
     if fig_idx==0:  # share the same y label
-        ax.set_ylabel('Heat map ratio (%)', fontsize=fontsize)
-    ax.set_xlabel('Automatic Goh scoring (%)', fontsize=fontsize)
+        ax.set_ylabel('Heat map derived score (%)', fontsize=fontsize)
+    ax.set_xlabel('L&S-Net output score (%)', fontsize=fontsize)
     ax.set_title(title_ls[fig_idx])
 
     mae = np.mean(np.abs(diff_))
@@ -121,6 +121,7 @@ fig_diff.tight_layout()
 fig.show()
 fig_diff.show()
 fig.savefig(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_threshold_{THRESHOLD}correct_p.png")
+print(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_threshold_{THRESHOLD}correct_p.png")
 fig_diff.savefig(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_diffthreshold_{THRESHOLD}correct_p.png")
 
 plt.close(fig)

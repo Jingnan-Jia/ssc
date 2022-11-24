@@ -390,7 +390,7 @@ class LoadScore(LoaderInit):
     def xformd(self, *arg, **karg):
         return xformd_score(*arg, **karg)
 
-    def load(self, merge: bool = False):
+    def load(self, merge: bool = False, nb=None, onlyreturn=('train', 'valid_aug', 'valid', 'test')):
         """
         Load all dataloaders: train, validaug, valid, test.
         Args:
@@ -403,6 +403,8 @@ class LoadScore(LoaderInit):
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
         for x, y, mode in zip([tr_x, vd_x, ts_x], [tr_y, vd_y, ts_y], ['train', 'valid', 'test']):
             self.save_xy(x, y, mode)
+        if nb:
+            tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:nb], tr_y[:nb], vd_x[:nb], vd_y[:nb], ts_x[:nb], ts_y[:nb]
         # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:2], tr_y[:2], vd_x[:2], vd_y[:2], ts_x[:2], ts_y[:2]
 
         if self.nb_img:
@@ -427,30 +429,36 @@ class LoadScore(LoaderInit):
                 sampler, self.args.sys_pro_in_0 = sampler_by_disext(tr_y, self.sys_ratio)
             else:
                 sampler = sampler_by_disext(tr_y)
-
-        tr_dataset = SynDataset(tr_x, tr_y, transform=self.xformd("train", synthesis=self.sys, args=self.args, tr_x=tr_x),
-                                synthesis=self.sys, require_lung_mask=self.require_lung_mask)
-        vd_data_aug = SynDataset(vd_x, vd_y, transform=self.xformd("validaug", synthesis=self.sys, args=self.args, tr_x=tr_x),
-                                 synthesis=self.sys, require_lung_mask=self.require_lung_mask)
-        vd_dataset = SynDataset(vd_x, vd_y, transform=self.xformd("valid", synthesis=False, args=self.args, tr_x=tr_x),
-                                synthesis=False, require_lung_mask=self.require_lung_mask)  # valid original data, without synthetic images
-        ts_dataset = SynDataset(ts_x, ts_y, transform=self.xformd("test", synthesis=False, args=self.args, tr_x=tr_x),
-                                synthesis=False, require_lung_mask=self.require_lung_mask)  # test original data, without synthetic images
-
-
-        print(f'sampler is {sampler}')
-        tr_shuffle = True if sampler is None else False
-        train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=tr_shuffle, num_workers=self.workers,
-                                      sampler=sampler, pin_memory=True)
-        validaug_dataloader = DataLoader(vd_data_aug, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
-                                         pin_memory=True)
-
-        valid_dataloader = DataLoader(vd_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
-                                      pin_memory=True)
-
-        test_dataloader = DataLoader(ts_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
-                                     pin_memory=True)
-        return train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader
+        out = []
+        if 'train' in onlyreturn:
+            tr_dataset = SynDataset(tr_x, tr_y, transform=self.xformd("train", synthesis=self.sys, args=self.args, tr_x=tr_x),
+                                    synthesis=self.sys, require_lung_mask=self.require_lung_mask)
+            print(f'sampler is {sampler}')
+            tr_shuffle = True if sampler is None else False
+            train_dataloader = DataLoader(tr_dataset, batch_size=self.batch_size, shuffle=tr_shuffle, num_workers=self.workers,
+                                        sampler=sampler, pin_memory=True)
+            out.append(train_dataloader)
+        if 'valid_aug' in onlyreturn:
+            vd_data_aug = SynDataset(vd_x, vd_y, transform=self.xformd("validaug", synthesis=self.sys, args=self.args, tr_x=tr_x),
+                                    synthesis=self.sys, require_lung_mask=self.require_lung_mask)
+            validaug_dataloader = DataLoader(vd_data_aug, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
+                                    pin_memory=True)
+            out.append(validaug_dataloader)
+        if 'valid' in onlyreturn:
+            vd_dataset = SynDataset(vd_x, vd_y, transform=self.xformd("valid", synthesis=False, args=self.args, tr_x=tr_x),
+                                    synthesis=False, require_lung_mask=self.require_lung_mask)  # valid original data, without synthetic images
+            valid_dataloader = DataLoader(vd_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
+                                        pin_memory=True)
+            out.append(valid_dataloader)
+        if 'test' in onlyreturn:
+                                        
+            ts_dataset = SynDataset(ts_x, ts_y, transform=self.xformd("test", synthesis=False, args=self.args, tr_x=tr_x),
+                                    synthesis=False, require_lung_mask=self.require_lung_mask)  # test original data, without synthetic images
+            test_dataloader = DataLoader(ts_dataset, batch_size=self.batch_size, shuffle=False, num_workers=self.workers,
+                                        pin_memory=True)
+            out.append(test_dataloader)
+        
+        return out
 
 
 class LoadPos2Score(LoaderInit):

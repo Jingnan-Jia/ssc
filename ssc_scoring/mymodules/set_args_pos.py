@@ -14,7 +14,8 @@ def get_args():
     parser.add_argument('--mode', choices=('train', 'infer', 'continue_train'), help='mode', type=str, default='train')
     parser.add_argument('--eval_id', help='id used for inference, or continue_train', type=int, default=0)
     parser.add_argument('--net', choices=('vgg11_3d','vgg16_3d','vgg19_3d', 'r3d_resnet', 'cnn3fc1', 'cnn4fc2', 'cnn5fc2', 'cnn6fc2',
-                                          'cnn2fc1', 'cnn3fc2', 'r3d_18'), help='network name', type=str, default='vgg16_3d')
+                                          'cnn2fc1', 'cnn3fc2', 'r3d_18', 'slow_r50',
+                                          'slowfast_r50', 'x3d_xs', 'x3d_s', 'x3d_m', 'x3d_l'), help='network name', type=str, default='vgg16_3d')
     parser.add_argument('--fc2_nodes', help='the number of nodes of fc2 layer, original is 4096', type=int,
                         default=1024)
     parser.add_argument('--fc1_nodes', help='the number of nodes of fc2 layer, original is 4096', type=int,

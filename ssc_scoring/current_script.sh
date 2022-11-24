@@ -4,19 +4,31 @@
 #SBATCH --cpus-per-gpu=6
 ##SBATCH -t 7-00:00:00
 #SBATCH --mem-per-gpu=90G
+#SBATCH -e results/slurmlogs/slurm-%j.err
+#SBATCH -o results/slurmlogs/slurm-%j.out
+##SBATCH --output=output_vessel_only_medium.txt
 #SBATCH --mail-type=end
 #SBATCH --mail-user=jiajingnan2222@gmail.com
 
 eval "$(conda shell.bash hook)"
 
-conda activate py38
 
 job_id=$SLURM_JOB_ID
+conda activate py38
+
 slurm_dir=results/slurmlogs
 
-#cp script.sh ${slurm_dir}/slurm-${job_id}.sh
+##cp script.sh ${slurm_dir}/slurm-${job_id}.shs
 scontrol write batch_script ${job_id} ${slurm_dir}/slurm-${job_id}_args.sh
-#cp mymodules/set_args_pos.py ${slurm_dir}/slurm-${job_id}_set_args.py  # backup setting
+cp mymodules/set_args.py ${slurm_dir}/slurm-${job_id}_set_args.py  # backup setting
+
+
+# Passing shell variables to ssh
+# https://stackoverflow.com/questions/15838927/passing-shell-variables-to-ssh
+# The following code will ssh to loginnode and git commit to synchronize commits from different nodes.
+
+# But sleep some time is required otherwise multiple commits by several experiments at the same time
+# will lead to commit error: fatal: could not parse HEAD
 
 
 ssh -tt jjia@nodelogin02 /bin/bash << ENDSSH
@@ -46,7 +58,7 @@ scontrol write batch_script "${job_id}" ssc_scoring/current_script.sh  # for the
 
 git add -A
 sleep 2  # avoid error: fatal: Could not parse object (https://github.com/Shippable/support/issues/2932)
-git commit -m "ssc_scoring_pos, jobid is ${job_id}"
+git commit -m "ssc_scoring, jobid is ${job_id}"
 sleep 2
 git push origin master
 sleep 2
@@ -56,7 +68,9 @@ ENDSSH
 echo "Hello, I am back in $(hostname) to run the code"
 
 
-idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=0 --batch_size=1 --mode='train' --infer_2nd=0 --eval_id=0 --level_node=0 --fold=1 --remark="vgg11, train/testing dataset is the same as PFT"
-#idx=1; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run_pos.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname="$(hostname)" --net="vgg11_3d" --train_on_level=2 --mode='infer' --infer_2nd=0 --eval_id=465 --level_node=0 --fold=4 --remark="infer fine net" &
+#idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=500 --sys=1 --sampler=0 --pretrained=1 --sys_pro_in_0=0.5 --sys_ratio=0.0 --mode='train' --fold=1 --gen_gg_as_retp=1 --remark="sampler+sys,sys_ratio=0.0, 16 patients in test dataset, including pat_070" &
+idx=0; export CUDA_VISIBLE_DEVICES=$idx; stdbuf -oL python -u run.py 2>${slurm_dir}/slurm-${job_id}_$idx.err 1>${slurm_dir}/slurm-${job_id}_$idx.out --outfile=${slurm_dir}/slurm-${job_id}_$idx --hostname=$(hostname) --epochs=501 --net='vgg11_HD' --sys=1 --sampler=0 --pretrained=1 --sys_pro_in_0=0.0 --sys_ratio=1.0 --mode='train' --weighted_syn_region=0 --batch_size=10 --fold=1 --gen_gg_as_retp=1 --remark="no pooling, ays_ratio=1, no weight_map (switch x,y), 16 patients in test dataset, interval=5, with pred outpout"
 
-#wait
+
+
+

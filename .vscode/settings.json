@@ -1,0 +1,6 @@
+{"files.watcherExclude": {
+    "**/.git/**": true,
+    "**/.git/**": true,
+  },
+  "python.linting.pylintArgs": ["--disable=C0111"]
+}
