@@ -35,7 +35,7 @@ def get_level_dir(img_fpath: str) -> str:
 
 if __name__ == '__main__':
 
-    net_id = 1920
+    net_id = 1945  #1920
 
     args = get_args()  # get argument
     # 15/3=5, all 5 levels in the same patient will be loaded in one batch
@@ -48,15 +48,18 @@ if __name__ == '__main__':
     seed = 49  # for split of  cross-validation
     all_loader = LoadScore(mypath, label_file, seed, args,
                            nb_img=None, require_lung_mask=True)  # data loader
-    valid_dataloader_ori = all_loader.load(onlyreturn='valid', nb=5000)[0]
+    valid_dataloader_ori = all_loader.load(onlyreturn='valid')[0]
 
     # only show visualization maps for testing dataset
     valid_dataloader = iter(valid_dataloader_ori)
-
-    net = get_net('convnext_tiny', 3, args)  # get network architecture
+    net_name = 'vgg11_HR'
+    net = get_net(net_name, 3, args)  # get network architecture
     # load trained weights
     net.load_state_dict(torch.load(mypath.model_fpath, map_location=device))
-    target_layer = [net.features[-1][-1].block[0]]
+    if net_name == 'vgg11_HR':
+        target_layer = [net.features[-2]]
+    else:
+        target_layer = [net.features[-1][-1].block[0]]
     cam = GradCAMPlusPlus(model=net, target_layers=target_layer, use_cuda=True)
 
     ma_ls, mi_ls = [], []
@@ -121,12 +124,13 @@ if __name__ == '__main__':
 
                     pat_dir = get_pat_dir(img_fpath)
                     level_dir = get_level_dir(img_fpath)
-                    cam_map_dir = '_'.join([mypath.id_dir+'/valid_data_gradcam_plusplus_rescale2global/'+ pat_dir, level_dir])
-                    
+                    cam_map_dir = mypath.id_dir+'/valid_data_gradcam_plusplus_rescale2global'
+                    if not os.path.exists(cam_map_dir):
+                        os.makedirs(cam_map_dir)
                  
                     plt.imshow(camoverimg)
                     plt.axis('off')
-                    plt.savefig(f"{cam_map_dir}_{pattern}.png", bbox_inches='tight')
+                    plt.savefig(f"{cam_map_dir}/{pat_dir}_{level_dir}_{pattern}.png", bbox_inches='tight')
                 print(f"{cam_map_dir}_{pattern}.png")
 
     print('finish!')
