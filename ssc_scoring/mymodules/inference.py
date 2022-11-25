@@ -111,7 +111,7 @@ def record_preds(mode, batch_y, pred, mypath):
 
 
 def round_to_5(pred: Union[torch.Tensor, np.ndarray], device=torch.device("cpu")) -> Union[torch.Tensor, np.ndarray]:
-    if type(pred) == torch.Tensor:
+    if isinstance(pred, torch.Tensor):
         tensor_flag = True
         pred = pred.cpu().detach().numpy()
     else:

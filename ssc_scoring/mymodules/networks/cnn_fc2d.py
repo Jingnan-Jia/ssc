@@ -184,7 +184,7 @@ class vgg11_HR(nn.Module):
 
             nn.Conv2d(128, 256, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
 
             nn.Conv2d(256, 256, kernel_size=3, padding=1),
@@ -249,10 +249,10 @@ class Cnn2fc1(nn.Module):
 
 
 def get_net(name: str, nb_cls: int, args):
-    if 'vgg' in name:
-        if name == 'vgg11_HR':
-            net = vgg11_HR(num_classes=nb_cls)
-        elif name == 'vgg11_bn':
+    if name == 'vgg11_HR':
+        net = vgg11_HR(num_classes=nb_cls)
+    elif 'vgg' in name:
+        if name == 'vgg11_bn':
             net = models.vgg11_bn(pretrained=args.pretrained, progress=True)
         elif name == 'vgg16':
             net = models.vgg16(pretrained=args.pretrained, progress=True)

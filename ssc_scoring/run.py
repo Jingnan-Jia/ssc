@@ -302,7 +302,7 @@ def train(args: Namespace, id_: int, log_dict: Dict[str, LogType]) -> Dict[str, 
         return log_dict
 
     all_loader = LoadScore(mypath, label_file, seed, args)
-    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
+    train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load(nb=5)
 
     epochs = args.epochs
 
