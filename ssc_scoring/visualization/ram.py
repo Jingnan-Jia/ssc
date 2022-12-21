@@ -35,7 +35,7 @@ def get_level_dir(img_fpath: str) -> str:
 
 if __name__ == '__main__':
 
-    net_id = 1945  #1920
+    net_id = 1947  #1920
 
     args = get_args()  # get argument
     # 15/3=5, all 5 levels in the same patient will be loaded in one batch
