@@ -6,10 +6,10 @@ import csv
 import seaborn as sns
 
 def main():
-    OBSERVER = 'anne'
-    PIE = False
+    OBSERVER = 'Lucia'  # 'anne'
+    PIE = True
     SCATTER = False
-    VIOLIN = True
+    VIOLIN = False
 
     json_fpath = f"/home/jjia/data/ssc_scoring/ssc_scoring/heat_map_performance_{OBSERVER}.json"
     with open(json_fpath) as f:
@@ -41,8 +41,33 @@ def main():
             explode = (0, 0, 0, 0, 0)  # only "explode" the 'Agree' and 'Strongly agree'
 
             patches, texts, autotexts = ax.pie(counts, explode=explode, autopct='%1.1f%%',
-                    shadow=False, startangle=0)
-            ax.set_title(title_ls[idx], y=0.92, fontdict={'fontsize':12})
+                    shadow=False, startangle=0, colors=['lightgreen', 'lightskyblue', 'yellow', 'orange', 'red'][::-1],
+                    textprops={'fontsize': 11})
+            iii = 0
+            for patch, txt in zip(patches, autotexts):
+                iii += 1
+                if iii<5:  # 4,3,2,1
+                    angle = (patch.theta2 + patch.theta1) / 2.
+                    if iii%2==0: # 2 or 4
+                        x = patch.r * 0.5 * np.cos(angle * np.pi / 180)
+                        y = patch.r * 0.5 * np.sin(angle * np.pi / 180)
+                        # move text to new position
+                        txt.set_position((x, y))  
+                    else:  # 3 or 1
+                        x = patch.r * 0.8 * np.cos(angle * np.pi / 180)
+                        y = patch.r * 0.8 * np.sin(angle * np.pi / 180)
+                        # move text to new position
+                        txt.set_position((x, y))  
+                    
+
+                    if angle==0:  # remove it
+                        x = patch.r * 1.2 * np.cos(angle * np.pi / 180)
+                        y = patch.r * 1.2 * np.sin(angle * np.pi / 180)
+                        # move text to new position
+                        txt.set_position((x, y))
+                        txt.set_color('white')
+
+            # ax.set_title(title_ls[idx], y=0.92, fontdict={'fontsize':12})
 
             ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
         ax = fig.add_subplot(1, 4, 1)

@@ -32,9 +32,12 @@ from ssc_scoring.mymodules.mydata import LoadScore
 from ssc_scoring.mymodules.inference import record_best_preds, round_to_5
 from ssc_scoring.mymodules.path import PathPos, PathScoreInit
 from argparse import Namespace
+# from fvcore.nn import FlopCountAnalysis
+from ptflops import get_model_complexity_info
+
 
 LogType = Optional[Union[int, float, str]]  # a global type to store immutable variables saved to log files
-
+FLOPs_done = False
 
 def gpu_info(outfile: str) -> None:
     """Get GPU usage information.
@@ -117,6 +120,20 @@ def start_run(args, mode, net, dataloader, loss_fun, loss_fun_mae, opt, mypath, 
 
         batch_x = batch_x.to(device)
         batch_y = batch_y.to(device)
+
+        global FLOPs_done
+        if not FLOPs_done:
+            try:
+                macs, params = get_model_complexity_info(net, tuple(batch_x.shape)[1:], as_strings=True, print_per_layer_stat=True, verbose=True)
+                log_param('net_MACs', macs)
+                log_param('net_params', params)
+
+            except Exception:
+                pass
+            FLOPs_done = True
+
+
+
 
         t2 = time.time()
         t_to_device.append(t2 - t1)

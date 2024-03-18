@@ -72,10 +72,17 @@ with open(ratio_csv_fpath, 'w') as f:
 diff = ratio_np - pred_score_np
 fontsize = 12
 for fig_idx in range(3):
-    ax = fig.add_subplot(1, 3, fig_idx + 1)
+    fig = plt.figure(figsize=(4, 4))  # new figure
+
+    # ax = fig.add_subplot(1, 3, fig_idx + 1)
+    ax = fig.add_subplot(1, 1, 1)
+
+    # ax = plt.figure()  # seperate figures, 
     ax_diff = fig_diff.add_subplot(1, 3, fig_idx + 1)
 
     scatter_kwds = {'c': colors[fig_idx], 's':20}
+    scatter_kwds = {'c': 'black', 's':20}  # no color setting
+
     ratio_ = ratio_np[fig_idx,:]
     pred_score_ = pred_score_np[fig_idx, :]
     diff_ = diff[fig_idx,:]
@@ -84,10 +91,10 @@ for fig_idx in range(3):
     ax.scatter(pred_score_, ratio_, **scatter_kwds)
     ax.set_ylim([0, 100])
     ax.set_xlim([0, 100])
-    if fig_idx==0:  # share the same y label
+    if fig_idx>=0:  # share the same y label
         ax.set_ylabel('Heat map derived score (%)', fontsize=fontsize)
     ax.set_xlabel('L&S-Net output score (%)', fontsize=fontsize)
-    ax.set_title(title_ls[fig_idx])
+    # ax.set_title(title_ls[fig_idx])
 
     mae = np.mean(np.abs(diff_))
     print(f"mae: {mae}")
@@ -116,13 +123,13 @@ for fig_idx in range(3):
         ax.text(0.1, 0.76, f'y = {m:.2f}x + {b:.2f}\nR\N{SUPERSCRIPT TWO} = {r_value ** 2: .2f}\np = {p_value: .5f}',
               ha="left", fontsize='large', transform=ax.transAxes)
 
-fig.tight_layout()
-fig_diff.tight_layout()
-fig.show()
-fig_diff.show()
-fig.savefig(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_threshold_{THRESHOLD}correct_p.png")
-print(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_threshold_{THRESHOLD}correct_p.png")
-fig_diff.savefig(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_diffthreshold_{THRESHOLD}correct_p.png")
+    fig.tight_layout()
+    fig_diff.tight_layout()
+    fig.show()
+    fig_diff.show()
+    fig.savefig(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_threshold_{THRESHOLD}correct_p_seperate_columns_blackcolor_{fig_idx}.png")
+    print(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_threshold_{THRESHOLD}correct_p_seperate_columns_blackcolor_{fig_idx}.png")
+    fig_diff.savefig(f"{ex_id}{dataset}_heatmap_ratio_vs_goh_score_diffthreshold_{THRESHOLD}correct_p_seperate_columns_blackcolor_{fig_idx}.png")
 
 plt.close(fig)
 

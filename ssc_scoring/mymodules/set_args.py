@@ -20,7 +20,7 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--mode', choices=('train', 'infer', 'continue_train', 'transfer_learning'),
                         help='mode', type=str, default='train')
     parser.add_argument('--eval_id', help='id used for inference, or continue_train', type=int, default=0)
-    parser.add_argument('--net', help='network name', type=str, default='vgg11_HR')
+    parser.add_argument('--net', help='network name', type=str, default='vgg16')
     parser.add_argument('--fc2_nodes', help='the number of nodes of fc2 layer, original is 4096', type=int,
                         default=1024)
     parser.add_argument('--fc1_nodes', help='the number of nodes of fc1 layer, original is 4096', type=int,

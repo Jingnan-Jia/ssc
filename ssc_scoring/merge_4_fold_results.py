@@ -51,7 +51,7 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
 
     else:
         from ssc_scoring.mymodules.path import PathScore as Path
-        label_postfix = "_label"
+        label_postfix = "_data"
         pred_postfix = "_pred_int_end5"
         # ex_ls = [1585, 1586, 1587, 1588]
 
@@ -71,7 +71,7 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
     label_all_dir = Path().model_dir + '/' + '_'.join([str(i) for i in ex_ls])
 
     # Collect and re-save.
-    for mode in ['train', 'validaug', 'valid', 'test']:
+    for mode in ['train', 'valid', 'test']:
         if not os.path.isdir(label_all_dir):
             os.makedirs(label_all_dir)
         label_all_path =  label_all_dir+ '/' + mode + label_postfix + ".csv"
@@ -85,6 +85,7 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
             else:
                 pred_1 = Path(id=ex_id).pred_end5(mode)
             label_1 = Path(id=ex_id).label(mode)
+            label_1 = label_1.replace('label', 'data')
 
             if os.path.isfile(pred_1):
                 df_label = pd.read_csv(label_1)
@@ -97,25 +98,26 @@ def merge(run_pos: bool, ex_ls: Sequence) -> None:
             df_pred_all -= 32
         df_label_all.to_csv(label_all_path, index=False)
         df_pred_all.to_csv(pred_all_path, index=False)
-        print('finish merge 4 fold results')
+        print('finish merge 4 fold results', pred_all_path)
 
 
-    # Evaluate the merged results
-    for mode in [ 'train', 'validaug', 'valid', 'test']:
-        label_all_path =  label_all_dir+ '/' + mode + label_postfix + ".csv"
-        pred_all_path =  label_all_dir+ '/' + mode + pred_postfix + ".csv"
+    # # Evaluate the merged results
+    # for mode in [ 'train', 'validaug', 'valid', 'test']:
+    #     label_all_path =  label_all_dir+ '/' + mode + label_postfix + ".csv"
+    #     pred_all_path =  label_all_dir+ '/' + mode + pred_postfix + ".csv"
 
-        metrics(pred_all_path, label_all_path, bland_in_1, adap_markersize)
-        icc_value = icc(label_all_path, pred_all_path)
-        print('icc: ', icc_value)
+    #     metrics(pred_all_path, label_all_path, bland_in_1, adap_markersize)
+    #     icc_value = icc(label_all_path, pred_all_path)
+    #     print('icc: ', icc_value)
 
 
 if __name__ == "__main__":
-    run_pos = True
+    run_pos = False
     # ex_ls = [193, 194, 276, 277]
-    ex_ls = [753, 757, 760, 762]  # vgg19
+    # ex_ls = [753, 757, 760, 762]  # vgg19
     # ex_ls = [749, 755, 759, 761]  # vgg16
     # ex_ls = [747, 754, 756, 758]  # vgg11
 
+    ex_ls = [1405, 1404, 1411, 1410]  # vgg11
 
     merge(run_pos, ex_ls)

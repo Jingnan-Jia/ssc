@@ -12,6 +12,7 @@ from tqdm import tqdm
 from ssc_scoring.mymodules.path import PathScore, PathPos
 import csv
 from collections import OrderedDict
+from scipy.stats import ttest_rel, ttest_ind, wilcoxon
 
 def snet_figure():
 
@@ -188,9 +189,20 @@ def lnet_figure():
         ax.set_ylabel(f"L-Net architecture")
         ax.set_xlabel(f"Absolute error [slices]")
         plt.yticks(list(range(1,len(net_id_dt)+1)), net_ls)
+        
+        # 标注 P 值
+        t_stat1, p_value1 = wilcoxon(ae_ls[0], ae_ls[1])  # vgg11 vs vgg16
+        t_stat2, p_value2 = wilcoxon(ae_ls[0], ae_ls[2])  # vgg11 vs vgg19
+        p_values = [p_value1, p_value2]
+
+        for i, p_value in enumerate(p_values):
+            plt.text(0.05, i + 1, f"P = {p_value:.3f}", va='center')
+            ax.plot([0.95, 1.05], [i + 1, i + 1], color='black', linestyle='--')
+
+
         plt.show()
-        fig.savefig(f"{mode}_different_net_comparison_L-Net_horizental.png", bbox_inches = "tight")
-        print(f"saved at: {mode}_different_net_comparison_L-Net_horizental.png")
+        fig.savefig(f"{mode}_different_net_comparison_L-Net_horizental_wt_p.png", bbox_inches = "tight")
+        print(f"saved at: {mode}_different_net_comparison_L-Net_horizenta_wt_p.png")
 
 
 def lnet_snet_figure():
@@ -235,11 +247,12 @@ def lnet_snet_figure():
         # mae_ls, net_ls, ae_ls = zip(*sorted(zip(mae_ls, net_ls, ae_ls)))
 
         for n, error in enumerate(ae_ls):
-            ax_l.boxplot(error, positions=[n + 1], notch=True, widths=0.7)
+            ax_l.boxplot(error, positions=[n + 1], notch=True, widths=0.7, vert=False)
         ax_l.set_xlabel(f"L-Net architecture")
         ax_l.set_ylabel(f"Absolute error [slices]")
         ax_l.set_xticks(list(range(1,len(net_id_dt)+1)), net_ls)
         # plt.xticks(rotation=15)  # Rotates X-Axis Ticks by 45-degrees
+        
 
         net_id_dt = {"convnext": 1883,
                      "squeezenet": 1879,
@@ -309,5 +322,5 @@ def label_diff(ax, x1, x2,y,text):
 if __name__ == "__main__":
     # lnet_snet_figure()
 
-    # snet_figure()
+    snet_figure()
     lnet_figure()

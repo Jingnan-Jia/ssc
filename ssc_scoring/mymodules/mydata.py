@@ -267,8 +267,11 @@ class LoadPos(LoaderInit):
                    train_on_level=self.train_on_level,
                    z_size=self.z_size, y_size = self.y_size, x_size=self.x_size)
 
-    def load(self):
+    def load(self, nb=None):
+
         tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = self.prepare_data()
+        if nb is not None:
+            tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:nb], tr_y[:nb], vd_x[:nb], vd_y[:nb], ts_x[:nb], ts_y[:nb]
         for x, y, mode in zip([tr_x, vd_x, ts_x], [tr_y, vd_y, ts_y], ['train', 'valid', 'test']):
             self.save_xy(x, y, mode)
         # tr_x, tr_y, vd_x, vd_y, ts_x, ts_y = tr_x[:2], tr_y[:2], vd_x[:2], vd_y[:2], ts_x[:2], ts_y[:2]

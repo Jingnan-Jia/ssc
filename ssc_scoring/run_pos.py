@@ -30,6 +30,7 @@ import kd_med
 from mlflow import log_metric, log_metrics, log_param, log_params
 # from fvcore.nn import FlopCountAnalysis
 FLOPs_done = False
+from ptflops import get_model_complexity_info
 
 def try_func(func):
     def _try_fun(*args, **kwargs):
@@ -88,17 +89,17 @@ def start_run(args, mode, net, enc_t, dataloader_dt, loss_fun, loss_fun_mae, opt
         batch_x = data['image_key'].to(device)
         batch_y = data['label_in_patch_key'].to(device)
 
-        # global FLOPs_done
-        # if not FLOPs_done:
-        #     net.eval()
-            # try:
-            #     net_flops = FlopCountAnalysis(net, batch_x)
-            #     flops = net_flops.total()
-            #     # print(f"net_flops_G: {flops/1000/1000/1000}")  # convert to G
-            #     log_param('net_FLOPs_G', flops/1000/1000/1000)# convert to G
-            # except Exception:
-            #     pass
-            # FLOPs_done = True
+        global FLOPs_done
+        if not FLOPs_done:
+            try:
+                macs, params = get_model_complexity_info(net, tuple(batch_x.shape)[1:], as_strings=True, print_per_layer_stat=True, verbose=True)
+                log_param('net_MACs', macs)
+                log_param('net_params', params)
+
+            except Exception:
+                pass
+            FLOPs_done = True
+            
         if mode == 'train':
             net.train()
         else:
@@ -264,7 +265,7 @@ def train(args):
                          args.level_node,
                          args.train_on_level, args.z_size, args.y_size, args.x_size, args.batch_size, args.workers)
     # train_dataloader, validaug_dataloader, valid_dataloader, test_dataloader = all_loader.load()
-    data_dt = all_loader.load()
+    data_dt = all_loader.load(nb=2)
 
     net = net.to(device)
     if args.eval_id:
