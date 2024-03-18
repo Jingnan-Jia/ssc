@@ -1,6 +1,4 @@
 # SSc score prediction
-[![codecov](https://codecov.io/gh/Jingnan-Jia/ssc_scoring/branch/master/graph/badge.svg?token=Z808SDKUFQ)](https://codecov.io/gh/Jingnan-Jia/ssc_scoring)
-![example workflow](https://github.com/Jingnan-Jia/ssc_scoring/actions/workflows/test.yml/badge.svg?branch=master)
 
 * `script.sh` is used to submit jobs to slurm
 * `set_args.py` stores the super parameters. imported by `run.py`
@@ -18,9 +16,9 @@
 2. `run.py --epochs=300 --mode='train' ... ` more arguments can be found in `set_args.py`.
 
 ### Predict Goh scores from 2d CT slices
-#### train and inference
-#### inference
+`run.py`
 
 ### Predict 5 positions from 3d CT scans
-#### train and inference
-#### inference
+`run_pos.py`
+## Where is the trained models? 
+Because github does not allow large file repository, so I put it at [google drive](https://drive.google.com/drive/folders/1ZqxFKgQNO5t1Ccb6CqIXSpM6hEzkffQF?usp=drive_link).
