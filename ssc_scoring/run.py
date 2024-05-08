@@ -24,7 +24,7 @@ matplotlib.use('Agg')
 from statistics import mean
 import threading
 from ssc_scoring.mymodules.set_args import get_args
-from ssc_scoring.mymodules.tool import record_1st, record_2nd, record_gpu_info, compute_metrics, eval_net_mae, record_artifacts, record_cgpu_info
+from ssc_scoring.mymodules.tool import record_1st, record_2nd, record_gpu_info, compute_metrics, eval_net_mae
 from ssc_scoring.mymodules.path import PathScore as Path
 from ssc_scoring.mymodules.myloss import get_loss
 from ssc_scoring.mymodules.networks.cnn_fc2d import get_net, ReconNet
@@ -356,16 +356,9 @@ if __name__ == "__main__":
     id: int = record_1st(PathScoreInit().record_file)  # write super parameters from set_args.py to record file.
 
     with mlflow.start_run(run_name=str(id), tags={"mlflow.note.content": args.remark}):
-        # p1 = threading.Thread(target=record_cgpu_info, args=(args.outfile,))
-        # p1.start()
 
         log_params(vars(args))
         log_dict: Dict[str, LogType] = {}  # a global dict to store variables saved to log files
 
         log_param('ID', id)
         log_dict = train(args, id, log_dict)
-        # log_params(log_dict)
-        # record_2nd('score', current_id=id, log_dict=log_dict, args=args)  # write more parameters & metrics to record file.
-
-        # p1.do_run = False  # stop the thread
-        # p1.join()
