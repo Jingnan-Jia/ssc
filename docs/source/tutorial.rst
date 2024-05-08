@@ -70,7 +70,7 @@ This aims to visually check if the synthetic label distribution are balanced.
 .. _Position prediction:
 Position prediction
 -------------------
-#. Training and validation for 4 folds separately.
+#. Training and validation for 4 folds separately. By updating the net's name we can train different models.
 
     .. code-block:: bash
 
