@@ -20,3 +20,5 @@ SimpleITK==2.1.1.2
 skimage==0.0
 torchvision==0.12.0
 tqdm==4.61.2
+numpy
+seg-metrics
