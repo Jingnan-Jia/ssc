@@ -5,3 +5,4 @@ omit =
     */dist-packages/*
     */distutils/*
     tests/*
+    */results/*

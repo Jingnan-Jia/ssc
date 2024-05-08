@@ -10,6 +10,7 @@ ssc_scoring/dataset
 *.err
 *.png
 *.jpg
+*.db
 .neptune/
 .idea
 tests/.coverage
