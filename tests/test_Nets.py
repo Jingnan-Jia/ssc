@@ -45,11 +45,7 @@ class TestNets(unittest.TestCase):
                 print(f'result.shape: {result.size()}')
                 self.assertEqual(result.shape, expected_shape)
 
-    # def test_script(self):
-    #     test_data = torch.randn(1, 1, 256, 192, 192).to(device)
-    #     for Net in [Cnn3fc1, Cnn3fc2, Cnn4fc2, Cnn5fc2, Cnn6fc2, Vgg11_3d]:
-    #         net = Net(num_classes=8, base=8, level_node=0).to(device)
-    #         test_script_save(net, test_data)
+
 
 class TestVgg11_3d_InLevel(unittest.TestCase):
     def test_shape(self):
@@ -59,10 +55,6 @@ class TestVgg11_3d_InLevel(unittest.TestCase):
             result = net.forward(data)
             self.assertEqual(result.shape, (2,9))
 
-    # def test_script(self):
-    #     test_data = [torch.randn(2, 1, 256, 192, 192).to(device), torch.tensor([[3], [3]]).to(device)]
-    #     net = Cnn3fc1(num_classes=9, base=8, level_node=2).to(device)
-    #     test_script_save(net, *test_data)
 
 
 if __name__ == "__main__":
